@@ -4,16 +4,43 @@ import urllib
 import collections
 
 # Import other classes
-from .body import Body
+from .classes import *
+from .constants import *
+from .validators import *
 
-# Create options class
-Options = collections.namedtuple("Options", ["linger", "compress"])
+class HTTP(object):
+    def __init__(self, io, options=None):
+        # Client variables
+        self._io = io
+        self._options = options or DEFAULT_OPTIONS
 
+        # State variables
+        self._cookies = dict()
+        self._headers = list()
+        self._history = list()
+
+    def post(*args, **kwargs):
+        pass
+
+    def get(*args, **kwargs):
+        pass
+
+    def request(self, method, location, parameters, headers, body):
+        pass
+
+    @validator
+    def _request_validate(self, request):
+        # Make sure the request is a Request
+        assert isinstance(request, Request)
+
+        # Validate each part of the request
+        assert safestring(request.method) in HTTP_METHODS
+        assert safestring(request.location)
+
+    def _request_render(self, request):
+        # Validate the request before forming it
 
 class Browser(object):
-
-    # Initialize constants
-    OPTIONS_DEFAULT = Options(linger=False, compress=False)
 
     def __init__(self, options=None):
         # Socket variables
@@ -21,7 +48,7 @@ class Browser(object):
         self._source, self._destination = None, None
 
         # HTTP options
-        self._options = options or Browser.OPTIONS_DEFAULT
+        self._options = options or DEFAULT_OPTIONS
 
         # Browser variables
         self._cookies = dict()
@@ -81,9 +108,6 @@ class Browser(object):
             source, destination, self._protocol, *[]
         )
 
-    def _receive_chunked_body(self):
-        pass
-
     def request(
         self, method=None, location=None, parameters=None, body=None, headers=None
     ):
@@ -103,10 +127,6 @@ class Browser(object):
 
 class Request(object):
 
-    # Initialize constants
-    HTTP_VERSION = 1.1
-    HTTP_METHODS = ["GET", "POST"]
-
     def __init__(self, options=None):
         # Request variables
         self._body = None
@@ -116,37 +136,7 @@ class Request(object):
         self._parameters = None
 
         # Browser options
-        self._options = options or Browser.OPTIONS_DEFAULT
-
-    @staticmethod
-    def _string(string):
-        # Make sure the given string is a string
-        assert isinstance(string, str)
-
-        # Make sure the string is of larger length then 0
-        assert len(string) > 0
-
-        # Make sure the string is safe
-        assert all(map(lambda char: ord(char) >= 0x20, string))
-
-        # Return variable
-        return string
-
-    @staticmethod
-    def _header(header):
-        # Make sure the given header is a list
-        assert isinstance(header, (list, tuple))
-
-        # Make sure the list is of length 2
-        assert len(header) == 2
-
-        # Make sure all the values in the list are safe strings
-        for entry in header:
-            # Make sure the variable is set and safe
-            Request._string(entry)
-
-        # Return header
-        return header
+        self._options = options or DEFAULT_OPTIONS
 
     @property
     def body(self):
@@ -195,20 +185,19 @@ class Request(object):
         # Add compression headers if needed
         if self._options.compress:
             # Add compression header
-            headers.append(
-				("Accept-Encoding", "gzip")
-			)
+            headers.append(REQUEST_HEADER_COMPRESS)
 
         # Add connection header
-        headers.append(
-            ("Connection", "Keep-Alive" if self._options.linger else "Close")
-        )
+        if self._options.linger:
+            # Linger if option is set
+            headers.append(REQUEST_HEADER_LINGER)
+        else:
+            # Close if option is unset
+            headers.append(REQUEST_HEADER_CLOSE)
 
         # Add content-length header
         if self.body:
-            headers.append(
-				("Content-Length", len(self.body))
-			)
+            headers.append(Header(HEADER_LENGTH, len(self.body)))
 
         # Return complete list of headers
         return headers
@@ -218,7 +207,7 @@ class Request(object):
         # Check if method is set
         if self._method:
             # Make sure method is valid
-            assert self._method in Request.HTTP_METHODS
+            assert self._method in HTTP_METHODS
 
         # Return the actual method
         return self._method or "GET"
@@ -260,7 +249,8 @@ class Request(object):
             )
         )
 
-    def __str__(self):
+    @property
+    def rendered(self):
         # Assemble complete request
         request = list()
 
@@ -301,6 +291,95 @@ class Request(object):
         # Format request to string
         return "\r\n".join(request)
 
+    def transmit(self, io):
+        io.send(self.rendered)
+
 
 class Response(object):
-    pass
+    def __init__(self, options=None):
+        # Response variables
+        self._body = None
+        self._headers = None
+        self._status = None
+        self._message = None
+
+        # Browser options
+        self._options = options or Browser.OPTIONS_DEFAULT
+
+    def _line(self, io):
+        # Initialize buffer
+        buffer = str()
+
+        # Read until the CRLF exists
+        while CRLF not in buffer:
+            # Receive one byte into the buffer
+            buffer += io.recv(1)
+
+        # Return received buffer
+        return buffer[: -len(CRLF)]
+
+    def _lines(self, io):
+        # Initialize temporary variable
+        temporary = None
+
+        # Yield lines until the line length is 0
+        while temporary != str():
+            # Yield the value if exists
+            if temporary:
+                yield temporary
+
+            # Read next line
+            temporary = self._line(io)
+
+    def _chunk(self, io):
+        # Read a line, decode the hex value
+        return int(self._line(io), 16)
+
+    def _chunks(self, io):
+        # Initialize temporary variable
+        temporary = None
+
+        # Yield chunks until the length is 0
+        while temporary != 0:
+            # Read and yield if the length exists
+            if temporary:
+                yield io.recv(temporary)
+
+            # Receive next length
+            temporary = self._chunk(io)
+
+    @property
+    def rendered(self):
+        pass
+
+    def receive(self, io):
+        # Receive header
+        _, status, message = self._line(io).split(" ", 2)
+
+        # Update status and message
+        self._status = int(status.strip())
+        self._message = str(message.strip())
+
+        # Initialize header list
+        headers = list()
+
+        # Receive headers
+        for header in self._lines(io):
+            # Validate header
+            if ":" not in header:
+                continue
+
+            # Split to name and value
+            name, value = header.split(":", 1)
+
+            # Append to header list
+            headers.append(Header(name.strip(), value.strip()))
+
+        # Update headers
+        self._headers = headers
+
+        # Decide which type of body will be received
+        length, stream, chunked = False, False, False
+
+        # Loop over headers and check them
+        for (name, value) in self._headers:
