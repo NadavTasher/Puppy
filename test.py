@@ -1,7 +1,7 @@
-from browser import Browser, Options, JSON
+from browser import HTTP, Browser, Options, JSON
 
 o = Options(False, True)
 
-b = Browser(o)
+b = HTTP(o)
 
-b.request("POST", "/test", {"hello": "Hello World"}, JSON({"hi": "hi there"}))
+b.request("POST", "/test", {}, [], JSON({"hi": "hi there"}))
