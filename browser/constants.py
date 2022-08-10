@@ -16,7 +16,7 @@ REQUEST_HEADER_COMPRESS = Header("Accept-Encoding", "gzip")
 
 # Response header constants
 RESPONSE_HEADER_CHUNKED = Header("Transfer-Encoding", "chunked")
-RESPONSE_HEADER_COMPRESS = Header("Transport-Encoding", "gzip")
+RESPONSE_HEADER_COMPRESS = Header("Content-Encoding", "gzip")
 
 # Initialize default options
 DEFAULT_OPTIONS = Options(False, False)

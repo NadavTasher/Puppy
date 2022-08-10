@@ -1,4 +1,5 @@
 # Import python libraries
+import zlib
 import socket
 import urllib
 import collections
@@ -47,48 +48,6 @@ class HTTP(object):
 
         # Return response
         return response
-
-    def _line(self):
-        # Initialize buffer
-        buffer = str()
-
-        # Read until the CRLF exists
-        while CRLF not in buffer:
-            # Receive one byte into the buffer
-            buffer += self._io.recv(1)
-
-        # Return received buffer
-        return buffer[: -len(CRLF)]
-
-    def _lines(self):
-        # Initialize temporary variable
-        temporary = None
-
-        # Yield lines until the line length is 0
-        while temporary != str():
-            # Yield the value if exists
-            if temporary:
-                yield temporary
-
-            # Read next line
-            temporary = self._line()
-
-    def _chunk(self):
-        # Read a line, decode the hex value
-        return int(self._line(), 16)
-
-    def _chunks(self):
-        # Initialize temporary variable
-        temporary = None
-
-        # Yield chunks until the length is 0
-        while temporary != 0:
-            # Read and yield if the length exists
-            if temporary:
-                yield self._io.recv(temporary)
-
-            # Receive next length
-            temporary = self._chunk()
 
     def _render(self, request):
         # Validate the request before forming it
@@ -154,67 +113,152 @@ class HTTP(object):
         # Return request, join by CRLF
         return CRLF.join(lines)
 
-    def _receive(self):
-        # Receive header
-        _, status, message = self._line().split(maxsplit=2)
+    def _receive(self, request):
+        # Receive HTTP header
+        status, message = self._receive_header()
 
-        # Update status and message
-        status = int(status.strip())
-        message = str(message.strip())
+        # Receive request headers
+        headers = list(self._receive_headers())
 
-        # Initialize header list
-        headers = list()
+        # Initialize empty body
+        body = None
 
-        # Receive headers
-        for header in self._lines():
-            # Validate header
-            if ":" not in header:
+        # Receive request body
+        if request.method != "GET":
+            body = self._receive_body(headers)
+            body = self._decompress_body(body, headers)
+
+        # Return new response
+        return Response(status, message, headers, body)
+
+    def _receive_line(self):
+        # Initialize buffer
+        buffer = str()
+
+        # Read until the CRLF exists
+        while CRLF not in buffer:
+            # Receive one byte into the buffer
+            buffer += self._io.recv(1)
+
+        # Return received buffer
+        return buffer[: -len(CRLF)]
+
+    def _receive_lines(self):
+        # Initialize line variable
+        line = None
+
+        # Yield lines until the line length is 0
+        while line != str():
+            # Yield the value if exists
+            if line:
+                yield line
+
+            # Read next line
+            line = self._receive_line()
+
+    def _receive_header(self):
+        # Receive one line as HTTP header
+        header = self._receive_line()
+
+        # Split header to status and message
+        _, status, message = header.split(None, 2)
+
+        # Return status and message
+        return int(status), str(message)
+
+    def _receive_headers(self):
+        # Receive all headers
+        for line in self._receive_lines():
+            # Validate header line
+            if ":" not in line:
                 continue
 
-            # Split to name and value
-            name, value = header.split(":", 1)
+            # Split header into name and value
+            name, value = line.split(":", 1)
 
-            # Append to header list
-            headers.append(Header(name.strip(), value.strip()))
-
-        # Initialize body with none value
-        body = self._receive_body(headers)
-
-        return Response()
-
+            # Yield new header
+            yield Header(name.strip(), value.strip())
 
     def _receive_body(self, headers):
-        # Decide which type of body will be received
-        length, stream, chunked = 0, False, False
-
         # Loop over headers and check them
         for header in headers:
             # Check if the header name is a content-length
             if header.name.lower() == HEADER_LENGTH.lower():
-                # Parse content length and break
+                # Parse content length and receive body
                 return self._receive_length(int(header.value))
 
-            # TODO: add check if octet-stream
-
-            # Check if header name is transport-encoding
+            # Check if header name is transfer-encoding
             if header.name.lower() == RESPONSE_HEADER_CHUNKED.name.lower():
                 # Check if encoding is chunked
                 if header.value.lower() == RESPONSE_HEADER_CHUNKED.value.lower():
-                    # Set chunked value and break
-                    chunked = True
-                    break
-        else:
-            # Set stream receiving
-            stream = True
+                    # Receive chunked body
+                    return self._receive_chunked()
+
+        # If linger is disabled, read until there is no more data
+        if not self._options.linger:
+            return self._receive_stream()
 
     def _receive_length(self, length):
-        pass
+        # Initialize buffer
+        buffer = str()
+
+        # Receive n bytes
+        buffer += self._io.recv(length)
+
+        # Return buffer
+        return buffer
 
     def _receive_chunked(self):
-        pass
+        # Initialize buffer and length
+        buffer = str()
+        length = None
+
+        # Read chunks until the length is 0
+        while length != 0:
+            # Check if length is defined
+            if length:
+                # Read and yield
+                buffer += self._io.recv(length)
+
+                # Receive line separator
+                self._receive_line()
+
+            # Receive next length
+            length = int(self._receive_line(), 16)
+
+        # Return buffer
+        return buffer
 
     def _receive_stream(self):
-        pass
+        # Initialize buffer and temporary
+        buffer = str()
+        temporary = None
+
+        # Loop until no bytes are left
+        while temporary != str():
+            # Push temporary value to buffer
+            if temporary:
+                buffer += temporary
+
+            # Read next byte
+            temporary = self._io.recv(1)
+
+        # Return buffer
+        return buffer
+
+    def _decompress_body(self, body, headers):
+        # Loop over headers and check them
+        for header in headers:
+            # Check if header name is content-encoding
+            if header.name.lower() == RESPONSE_HEADER_COMPRESS.name.lower():
+                # Check if encoding is chunked
+                if header.value.lower() == RESPONSE_HEADER_COMPRESS.value.lower():
+                    # Decompress body and return
+                    return zlib.decompress(body, 40)
+
+        # Return body as-is
+        return body
+
 
 class Browser(HTTP):
     def __init__(self, options=DEFAULT_OPTIONS):
@@ -311,7 +355,7 @@ class Response(object):
         # Browser options
         self._options = options or Browser.OPTIONS_DEFAULT
 
-    def _line(self, io):
+    def _receive_line(self, io):
         # Initialize buffer
         buffer = str()
 
@@ -323,7 +367,7 @@ class Response(object):
         # Return received buffer
         return buffer[: -len(CRLF)]
 
-    def _lines(self, io):
+    def _receive_lines(self, io):
         # Initialize temporary variable
         temporary = None
 
@@ -334,11 +378,11 @@ class Response(object):
                 yield temporary
 
             # Read next line
-            temporary = self._line(io)
+            temporary = self._receive_line(io)
 
     def _chunk(self, io):
         # Read a line, decode the hex value
-        return int(self._line(io), 16)
+        return int(self._receive_line(io), 16)
 
     def _chunks(self, io):
         # Initialize temporary variable
@@ -359,7 +403,7 @@ class Response(object):
 
     def receive(self, io):
         # Receive header
-        _, status, message = self._line(io).split(" ", 2)
+        _, status, message = self._receive_line(io).split(" ", 2)
 
         # Update status and message
         self._status = int(status.strip())
@@ -369,7 +413,7 @@ class Response(object):
         headers = list()
 
         # Receive headers
-        for header in self._lines(io):
+        for header in self._receive_lines(io):
             # Validate header
             if ":" not in header:
                 continue
