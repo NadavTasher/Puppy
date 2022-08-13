@@ -7,7 +7,6 @@ import collections
 # Import other classes
 from .classes import *
 from .constants import *
-from .validators import *
 
 
 class HTTP(object):
@@ -77,6 +76,7 @@ class HTTP(object):
 
         # Compile string of parameters
         parameters = (
+            # Format form parameters
             "?{0}".format(
                 "&".join(
                     [
@@ -85,7 +85,9 @@ class HTTP(object):
                     ]
                 )
             )
+            # If parameters exist
             if request.parameters
+            # Or just use an empty string
             else str()
         )
 
@@ -113,20 +115,16 @@ class HTTP(object):
         # Return request, join by CRLF
         return CRLF.join(lines)
 
-    def _receive(self, request):
+    def _receive(self):
         # Receive HTTP header
         status, message = self._receive_header()
 
         # Receive request headers
         headers = list(self._receive_headers())
 
-        # Initialize empty body
-        body = None
-
         # Receive request body
-        if request.method != "GET":
-            body = self._receive_body(headers)
-            body = self._decompress_body(body, headers)
+        body = self._receive_body(headers)
+        body = self._decompress_body(body, headers)
 
         # Return new response
         return Response(status, message, headers, body)
@@ -180,8 +178,10 @@ class HTTP(object):
             yield Header(name.strip(), value.strip())
 
     def _receive_body(self, headers):
+        print(headers)
         # Loop over headers and check them
         for header in headers:
+            print(header.name.lower())
             # Check if the header name is a content-length
             if header.name.lower() == HEADER_LENGTH.lower():
                 # Parse content length and receive body
@@ -191,6 +191,8 @@ class HTTP(object):
             if header.name.lower() == RESPONSE_HEADER_CHUNKED.name.lower():
                 # Check if encoding is chunked
                 if header.value.lower() == RESPONSE_HEADER_CHUNKED.value.lower():
+                    print(header.name.lower())
+                    print(RESPONSE_HEADER_CHUNKED.name.lower())
                     # Receive chunked body
                     return self._receive_chunked()
 
