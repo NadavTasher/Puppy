@@ -1,30 +1,20 @@
-from collections import namedtuple
+import contextlib
+import collections
 
 
-def validate(_type, _value, _raise=True):
-    try:
-        # Check if type is a type
-        if isinstance(_type, type):
-            # Check if the value is an instance of the type
-            if not isinstance(_value, _type):
-                raise TypeError(
-                    "{0} is not an instance of {1}".format(_value, _type.__name__)
-                )
-        else:
-            # Execute validator with value
-            if _type(_value) not in (None, _value):
-                # Generic type error
-                raise TypeError("{0} is invalid".format(_type))
-    except:
-        # Check if raise is true
-        if _raise:
-            raise
-
-        # Return failure
-        return False
-
-    # Return success
-    return True
+def validate(_type, _value):
+    # Check if type is a type
+    if isinstance(_type, type):
+        # Check if the value is an instance of the type
+        if not isinstance(_value, _type):
+            raise TypeError(
+                "{0} is not an instance of {1}".format(_value, _type.__name__)
+            )
+    else:
+        # Execute validator with value
+        if _type(_value) not in (None, _value):
+            # Generic type error
+            raise TypeError("{0} is invalid".format(_type))
 
 
 def typedtuple(name, properties):
@@ -33,7 +23,7 @@ def typedtuple(name, properties):
     validate(List(Tuple(str, Any)), properties)
 
     # Create namedtuple classtype
-    classtype = namedtuple(name, [name for name, _ in properties])
+    classtype = collections.namedtuple(name, [name for name, _ in properties])
 
     # Create class that validates the properties
     class TypedTuple(classtype):
@@ -56,18 +46,21 @@ def typedtuple(name, properties):
 def Any(_value):
     pass
 
+
 def Union(*_types):
     def validator(_value):
         # Make sure type is in types
         for _type in _types:
-            if validate(_type, _value, _raise=False):
-                return
+            with contextlib.suppress(Exception):
+                if validate(_type, _value):
+                    return
 
         # Raise exception
         raise TypeError("{0} is not one of {1}".format(_value, _types))
 
     # Return created validator
     return validator
+
 
 def Literal(*_values):
     def validator(_value):
