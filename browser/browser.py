@@ -178,10 +178,8 @@ class HTTP(object):
             yield Header(name.strip(), value.strip())
 
     def _receive_body(self, headers):
-        print(headers)
         # Loop over headers and check them
         for header in headers:
-            print(header.name.lower())
             # Check if the header name is a content-length
             if header.name.lower() == HEADER_LENGTH.lower():
                 # Parse content length and receive body
@@ -191,8 +189,6 @@ class HTTP(object):
             if header.name.lower() == RESPONSE_HEADER_CHUNKED.name.lower():
                 # Check if encoding is chunked
                 if header.value.lower() == RESPONSE_HEADER_CHUNKED.value.lower():
-                    print(header.name.lower())
-                    print(RESPONSE_HEADER_CHUNKED.name.lower())
                     # Receive chunked body
                     return self._receive_chunked()
 

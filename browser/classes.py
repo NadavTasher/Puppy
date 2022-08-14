@@ -22,7 +22,7 @@ Response = typedtuple(
         ("status", int),
         ("message", str),
         ("headers", List(Header)),
-        ("body", Optional(Body)),
+        ("body", Optional(str)),
     ],
 )
 
