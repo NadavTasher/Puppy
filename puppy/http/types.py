@@ -1,32 +1,32 @@
-# Import python libraries
-from .typedtuple import *
+# Import typing library
+from ..typing import *
 
 # Create request and response parts
-Header = typedtuple("Header", [("name", str), ("value", str)])
-Body = typedtuple("Body", [("content", str), ("headers", Optional(List(Header)))])
+Header = NamedTuple("Header", [("name", str), ("value", str)])
+Body = NamedTuple("Body", [("content", str), ("headers", Optional[List[Header]])])
 
 # Create request & response classes
-Request = typedtuple(
+Request = NamedTuple(
     "Request",
     [
-        ("method", Literal("GET", "POST")),
+        ("method", Literal["GET", "POST"]),
         ("location", str),
-        ("parameters", Optional(Dictionary(str, str))),
-        ("headers", Optional(List(Header))),
-        ("body", Optional(Body)),
+        ("parameters", Optional[Dict[str, str]]),
+        ("headers", Optional[List[Header]]),
+        ("body", Optional[Body]),
     ],
 )
-Response = typedtuple(
+Response = NamedTuple(
     "Response",
     [
         ("status", int),
         ("message", str),
-        ("headers", List(Header)),
-        ("body", Optional(str)),
+        ("headers", List[Header]),
+        ("body", Optional[str]),
     ],
 )
 
 # Create browser classes
-Cookie = typedtuple("Cookie", [("name", str), ("value", str)])
-Options = typedtuple("Options", [("linger", bool), ("compress", bool)])
-Artifact = typedtuple("Artifact", [("request", Request), ("response", Response)])
+Cookie = NamedTuple("Cookie", [("name", str), ("value", str)])
+Options = NamedTuple("Options", [("linger", bool), ("compress", bool)])
+Artifact = NamedTuple("Artifact", [("request", Request), ("response", Response)])

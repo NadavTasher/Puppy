@@ -9,12 +9,13 @@
 # b = HTTP(s, o)
 
 # # print(b.request("POST", "/", {}, [], JSON({"hi": "hi there"})))
-# print(Request("GET", "/", {"aaaa": "strassadasda"}, [], None))
 
 from puppy.typing import *
+from puppy.http.types import *
 
 # Dict[str, str]({"a": 1})
 
-Test = NamedTuple("AAA", [("hello", int)])
+# Test = NamedTuple("AAA", [("hello", int)])
 
-print(Test("a"))
+# print(Test("a"))
+print(Request("GET", "/", {"aaaa": "strassadasda"}, [], None))
