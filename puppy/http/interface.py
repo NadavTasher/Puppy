@@ -64,35 +64,20 @@ class Interface(object):
             # Convert name and value to lowercase
             name, value = name.lower(), value.lower()
 
-            # Parse content-type header
-            if name == "content-type":
-                content_type = value
-
-            # Parse content-length header
-            if name == "content-length":
-                content_length = value
-
-            # Parse content-encoding header
-            if name == "content-encoding":
-                # Make sure the encoding is supported
-                assert value == "gzip"
-
-                # Update the encoding
-                content_encoding = value
-
-            # Parse transfer-encoding header
-            if name == "transfer-encoding":
-                # Make sure the encoding is supported
-                assert value == "chunked"
-
-                # Update the encoding
-                transfer_encoding = value
+            # Check header names and update
+            content_type = value if name == "content-type" else content_type
+            content_length = value if name == "content-length" else content_length
+            content_encoding = value if name == "content-encoding" else content_encoding
+            transfer_encoding = value if name == "transfer-encoding" else transfer_encoding
 
         # Decide which content to receive
         if content_length:
             # Receive content by length
             content = self.receive_by_length(content_length)
         elif transfer_encoding:
+            # Make sure encoding is chunked
+            assert transfer_encoding == "chunked"
+
             # Receive content by chunks
             content = self.receive_by_chunks()
         elif connection == "close" and content_type:
@@ -104,6 +89,9 @@ class Interface(object):
 
         # Check if compression was provided
         if content_encoding:
+            # Make sure encoding is gzip
+            assert content_encoding == "gzip"
+
             # Decompress content as gzip
             content = zlib.decompress(content, 40)
 
