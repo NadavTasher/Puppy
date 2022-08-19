@@ -18,4 +18,4 @@ from puppy.http.types import *
 # Test = NamedTuple("AAA", [("hello", int)])
 
 # print(Test("a"))
-print(Request("GET", "/", {"aaaa": "strassadasda"}, [], None))
+print(Request("GAL", "/", {"aaaa": "strassadasda"}, [], None))
