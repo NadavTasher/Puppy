@@ -65,6 +65,7 @@ class Interface(object):
             name, value = name.lower(), value.lower()
 
             # Check header names and update
+            connection = value if name == "connection" else connection
             content_type = value if name == "content-type" else content_type
             content_length = value if name == "content-length" else content_length
             content_encoding = value if name == "content-encoding" else content_encoding
