@@ -4,9 +4,12 @@ from ..typing import types
 # Import required types
 from .types import Header, Artifact, Options
 
+# Operating constants
+CRLF = "\r\n"
+VERSION = 1.1
+
 
 class Interface(object):
-    @types(io=Any, options=Options)
     def __init__(self, io, options):
         # Set internal parameters
         self._io = io
@@ -81,7 +84,10 @@ class Interface(object):
 
             # Receive content by chunks
             content = self.receive_by_chunks()
-        elif connection == "close" and content_type:
+        elif content_type:
+            # Make sure connection is set to closed
+            assert connection == "close"
+
             # Receive content by stream
             content = self.receive_by_stream()
         else:
@@ -174,6 +180,9 @@ class Interface(object):
 
             # Transmit compression header
             self.transmit_header(Header("Content-Encoding", "gzip"))
+
+            # Transmit supported compressions
+            self.transmit_header(Header("Accept-Encoding", "gzip"))
 
         # Transmit content-length header
         self.transmit_header(Header("Content-Length", str(len(content))))
