@@ -1,3 +1,7 @@
+# Import gzip and io
+import StringIO
+import gzip
+
 # Import typing objects
 from ..typing import types
 
@@ -15,7 +19,20 @@ class Interface(object):
         self._io = io
         self._options = options
 
-    def receive_line(self):
+    def _receive_artifact(self):
+        # Receive header line
+        header = self._receive_line()
+
+        # Receive all headers
+        headers = list(self._receive_headers())
+
+        # Receive content (with headers)
+        content = self._receive_content(headers)
+
+        # Return artifact
+        return Artifact(header, headers, content)
+
+    def _receive_line(self):
         # Initialize buffer
         buffer = str()
 
@@ -27,7 +44,7 @@ class Interface(object):
         # Return received buffer
         return buffer[: -len(CRLF)]
 
-    def receive_lines(self):
+    def _receive_lines(self):
         # Initialize line variable
         line = None
 
@@ -38,11 +55,11 @@ class Interface(object):
                 yield line
 
             # Read next line
-            line = self.receive_line()
+            line = self._receive_line()
 
-    def receive_headers(self):
+    def _receive_headers(self):
         # Receive all headers
-        for line in self.receive_lines():
+        for line in self._receive_lines():
             # Validate header line
             if ":" not in line:
                 continue
@@ -53,7 +70,7 @@ class Interface(object):
             # Yield new header
             yield Header(name.strip(), value.strip())
 
-    def receive_content(self, headers):
+    def _receive_content(self, headers):
         # Create temporary variables
         content = None
         connection = None
@@ -72,24 +89,26 @@ class Interface(object):
             content_type = value if name == "content-type" else content_type
             content_length = value if name == "content-length" else content_length
             content_encoding = value if name == "content-encoding" else content_encoding
-            transfer_encoding = value if name == "transfer-encoding" else transfer_encoding
+            transfer_encoding = (
+                value if name == "transfer-encoding" else transfer_encoding
+            )
 
         # Decide which content to receive
         if content_length:
             # Receive content by length
-            content = self.receive_by_length(content_length)
+            content = self._receive_content_by_length(content_length)
         elif transfer_encoding:
             # Make sure encoding is chunked
             assert transfer_encoding == "chunked"
 
             # Receive content by chunks
-            content = self.receive_by_chunks()
+            content = self._receive_content_by_chunks()
         elif content_type:
             # Make sure connection is set to closed
             assert connection == "close"
 
             # Receive content by stream
-            content = self.receive_by_stream()
+            content = self._receive_content_by_stream()
         else:
             # No content to be received
             return None
@@ -105,10 +124,10 @@ class Interface(object):
         # Return content string
         return content
 
-    def receive_by_length(self, length):
+    def _receive_content_by_length(self, length):
         return self._io.recv(int(length))
 
-    def receive_by_chunks(self):
+    def _receive_content_by_chunks(self):
         # Initialize buffer and length
         buffer = str()
         length = None
@@ -121,15 +140,15 @@ class Interface(object):
                 buffer += self._io.recv(length)
 
                 # Receive line separator
-                self.receive_line()
+                self._receive_line()
 
             # Receive next length
-            length = int(self.receive_line(), 16)
+            length = int(self._receive_line(), 16)
 
         # Return buffer
         return buffer
 
-    def receive_by_stream(self):
+    def _receive_content_by_stream(self):
         # Initialize buffer and temporary
         buffer = str()
         temporary = None
@@ -146,59 +165,56 @@ class Interface(object):
         # Return buffer
         return buffer
 
-    def receive(self):
-        # Receive header line
-        header = self.receive_line()
-        
-        # Receive all headers
-        headers = list(self.receive_headers())
+    def _transmit_artifact(self, artifact):
+        # Transmit HTTP header
+        self._transmit_line(artifact.header)
 
-        # Receive content (with headers)
-        content = self.receive_content(headers)
+        # Transmit all headers
+        self._transmit_headers(artifact.headers)
 
-        # Return artifact
-        return Artifact(header, headers, content)
+        # Transmit content
+        self._transmit_content(artifact.content)
 
-    def transmit_line(self, line):
+    def _transmit_line(self, line):
+        print(line)
         # Write line with CRLF
         self._io.send(line + CRLF)
 
-    def transmit_header(self, header):
+    def _transmit_header(self, header):
         # Write header with name: value format
-        self.transmit_line("%s: %s" % (header.name, header.value))
+        self._transmit_line("%s: %s" % (header.name, header.value))
 
-    def transmit_headers(self, headers):
+    def _transmit_headers(self, headers):
         # Loop over each header and transmit it
         for header in headers:
-            self.transmit_header(header)
+            self._transmit_header(header)
 
-    def transmit_content(self, content, compress=False):
-        # Check if compression is required
-        if compress:
-            # Compress content using gzip
-            content = content
+    def _transmit_content(self, content):
+        # Check if content is even defined
+        if content:
+            # Check if compression is required
+            if self._options.compress:
+                # Compress content using gzip
+                temporary = StringIO.StringIO()
+                with gzip.GzipFile(fileobj=temporary, mode="w") as compressor:
+                    compressor.write(content)
+                content = temporary.getvalue()
 
-            # Transmit compression header
-            self.transmit_header(Header("Content-Encoding", "gzip"))
+                # Transmit compression header
+                self._transmit_header(Header("Content-Encoding", "gzip"))
 
-            # Transmit supported compressions
-            self.transmit_header(Header("Accept-Encoding", "gzip"))
+                # Transmit supported compressions
+                self._transmit_header(Header("Accept-Encoding", "gzip"))
 
-        # Transmit content-length header
-        self.transmit_header(Header("Content-Length", str(len(content))))
+            # Transmit content-length header
+            self._transmit_header(Header("Content-Length", str(len(content))))
 
-        # Transmit CRLF separator
-        self.transmit_line(str())
+            # Transmit CRLF separator
+            self._transmit_line(str())
 
-        # Transmit complete contents
-        self._io.send(content)
-
-    def transmit(self, artifact):
-        # Transmit HTTP header
-        self.transmit_line(artifact.header)
-
-        # Transmit all headers
-        self.transmit_headers(artifact.headers)
-
-        # Transmit content
-        self.transmit_content(artifact.content, self._options.compress)
+            # Transmit complete contents
+            self._io.send(content)
+        else:
+            # Transmit two CRLF separators
+            self._transmit_line(str())
+            self._transmit_line(str())

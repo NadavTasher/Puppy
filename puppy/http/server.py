@@ -8,16 +8,16 @@ from .interface import Interface, VERSION
 class Server(Interface):
 	def receive(self):
 		# Receive artifact from parent
-		artifact = super(Server, self).receive(self)
+		artifact = self._receive_artifact()
 
 		# Parse HTTP header as request header
-		method, uri, _ = artifact.header.split(None, 2)
+		method, location, _ = artifact.header.split(None, 2)
 
 		# Initialize parameters (to be filled from query)
 		parameters = dict()
 
-		# Split URI to location and query string
-		location, query = uri.split("?", 1)
+		# Split location to path and query string
+		path, query = uri.split("?", 1)
 
 		# Parse query if needed
 		if query:
@@ -37,7 +37,7 @@ class Server(Interface):
 				parameters[name] = value
 
 		# Return created request
-		return Request(method, location, parameters, artifact.headers, artifact.content)
+		return Request(method, path, parameters, artifact.headers, artifact.content)
 
 	def transmit(self, response):
 		# Create HTTP header
@@ -47,4 +47,4 @@ class Server(Interface):
 		artifact = Artifact(header, response.headers, response.content)
 
 		# Transmit artifact
-		return super(Server, self).transmit(artifact)
+		return self._transmit_artifact(artifact)

@@ -3,13 +3,12 @@ import json
 import urllib
 
 # Import other classes
-from .classes import Body, Header
-from .constants import HEADER_TYPE
+from ..types import Header
 
 
 def MimeType(content, mimetype):
     # Return body with mimetype
-    return Body(content, [Header(HEADER_TYPE, mimetype)])
+    return content, [Header("Content-Type", mimetype)]
 
 
 def JSON(content):

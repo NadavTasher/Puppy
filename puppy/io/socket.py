@@ -1,0 +1,2 @@
+class SocketIO(object):
+	pass
