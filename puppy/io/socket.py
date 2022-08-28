@@ -1,2 +1,0 @@
-class SocketIO(object):
-	pass

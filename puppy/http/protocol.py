@@ -1,6 +1,6 @@
 # Import gzip and io
-import StringIO
 import gzip
+import StringIO
 
 # Import typing objects
 from ..typing import types
@@ -11,40 +11,38 @@ from .types import Header, Artifact, Options
 # Operating constants
 CRLF = "\r\n"
 VERSION = 1.1
+OPTIONS = Options(linger=False, compress=False)
 
-
-class Interface(object):
-    def __init__(self, io, options):
-        # Set internal parameters
-        self._io = io
-        self._options = options
-
-    def _receive_artifact(self):
+class Protocol(object):
+    @staticmethod
+    def receive(io):
         # Receive header line
-        header = self._receive_line()
+        header = Protocol.receive_line(io)
 
         # Receive all headers
-        headers = list(self._receive_headers())
+        headers = list(Protocol.receive_headers(io))
 
         # Receive content (with headers)
-        content = self._receive_content(headers)
+        content = Protocol.receive_content(headers)
 
         # Return artifact
         return Artifact(header, headers, content)
 
-    def _receive_line(self):
+    @staticmethod
+    def receive_line(io):
         # Initialize buffer
         buffer = str()
 
         # Read until the CRLF exists
         while CRLF not in buffer:
             # Receive one byte into the buffer
-            buffer += self._io.recv(1)
+            buffer += io.recv(1)
 
         # Return received buffer
         return buffer[: -len(CRLF)]
 
-    def _receive_lines(self):
+    @staticmethod
+    def receive_lines(io):
         # Initialize line variable
         line = None
 
@@ -55,11 +53,12 @@ class Interface(object):
                 yield line
 
             # Read next line
-            line = self._receive_line()
+            line = Protocol.receive_line(io)
 
-    def _receive_headers(self):
+    @staticmethod
+    def receive_headers(io):
         # Receive all headers
-        for line in self._receive_lines():
+        for line in Protocol.receive_lines(io):
             # Validate header line
             if ":" not in line:
                 continue
@@ -70,7 +69,8 @@ class Interface(object):
             # Yield new header
             yield Header(name.strip(), value.strip())
 
-    def _receive_content(self, headers):
+    @staticmethod
+    def receive_content(io, headers):
         # Create temporary variables
         content = None
         connection = None
@@ -96,19 +96,19 @@ class Interface(object):
         # Decide which content to receive
         if content_length:
             # Receive content by length
-            content = self._receive_content_by_length(content_length)
+            content = Protocol.receive_content_by_length(io, content_length)
         elif transfer_encoding:
             # Make sure encoding is chunked
             assert transfer_encoding == "chunked"
 
             # Receive content by chunks
-            content = self._receive_content_by_chunks()
+            content = Protocol.receive_content_by_chunks(io)
         elif content_type:
             # Make sure connection is set to closed
             assert connection == "close"
 
             # Receive content by stream
-            content = self._receive_content_by_stream()
+            content = Protocol.receive_content_by_stream(io)
         else:
             # No content to be received
             return None
@@ -124,10 +124,12 @@ class Interface(object):
         # Return content string
         return content
 
-    def _receive_content_by_length(self, length):
-        return self._io.recv(int(length))
+    @staticmethod
+    def receive_content_by_length(io, length):
+        return io.recv(int(length))
 
-    def _receive_content_by_chunks(self):
+    @staticmethod
+    def receive_content_by_chunks(io):
         # Initialize buffer and length
         buffer = str()
         length = None
@@ -137,18 +139,19 @@ class Interface(object):
             # Check if length is defined
             if length:
                 # Read and yield
-                buffer += self._io.recv(length)
+                buffer += io.recv(length)
 
                 # Receive line separator
-                self._receive_line()
+                Protocol.receive_line(io)
 
             # Receive next length
-            length = int(self._receive_line(), 16)
+            length = int(receive_line(io), 16)
 
         # Return buffer
         return buffer
 
-    def _receive_content_by_stream(self):
+    @staticmethod
+    def receive_content_by_stream(io):
         # Initialize buffer and temporary
         buffer = str()
         temporary = None
@@ -160,36 +163,44 @@ class Interface(object):
                 buffer += temporary
 
             # Read next byte
-            temporary = self._io.recv(1)
+            temporary = io.recv(1)
 
         # Return buffer
         return buffer
 
-    def _transmit_artifact(self, artifact):
+    @staticmethod
+    def transmit(io, artifact, options=OPTIONS):
         # Transmit HTTP header
-        self._transmit_line(artifact.header)
+        Protocol.transmit_line(io, artifact.header)
 
         # Transmit all headers
-        self._transmit_headers(artifact.headers)
+        Protocol.transmit_headers(io, artifact.headers)
 
         # Transmit content
-        self._transmit_content(artifact.content)
+        Protocol.transmit_content(io, artifact.content, options)
 
-    def _transmit_line(self, line):
-        print(line)
-        # Write line with CRLF
-        self._io.send(line + CRLF)
+    @staticmethod
+    def transmit_line(io, line=None):
+        # Write given line if defined
+        if line:
+            io.send(line)
 
-    def _transmit_header(self, header):
+        # Write HTTP line separator
+        io.send(CRLF)
+
+    @staticmethod
+    def transmit_header(io, header):
         # Write header with name: value format
-        self._transmit_line("%s: %s" % (header.name, header.value))
+        Protocol.transmit_line(io, "%s: %s" % (header.name, header.value))
 
-    def _transmit_headers(self, headers):
+    @staticmethod
+    def transmit_headers(io, headers):
         # Loop over each header and transmit it
         for header in headers:
-            self._transmit_header(header)
+            Protocol.transmit_header(io, header)
 
-    def _transmit_content(self, content):
+    @staticmethod
+    def transmit_content(io, content, options=OPTIONS):
         # Check if content is even defined
         if content:
             # Check if compression is required
@@ -201,20 +212,20 @@ class Interface(object):
                 content = temporary.getvalue()
 
                 # Transmit compression header
-                self._transmit_header(Header("Content-Encoding", "gzip"))
+                Protocol.transmit_header(io, Header("Content-Encoding", "gzip"))
 
                 # Transmit supported compressions
-                self._transmit_header(Header("Accept-Encoding", "gzip"))
+                Protocol.transmit_header(io, Header("Accept-Encoding", "gzip"))
 
             # Transmit content-length header
-            self._transmit_header(Header("Content-Length", str(len(content))))
+            Protocol.transmit_header(io, Header("Content-Length", str(len(content))))
 
             # Transmit CRLF separator
-            self._transmit_line(str())
+            Protocol.transmit_line(io)
 
             # Transmit complete contents
-            self._io.send(content)
+            io.send(content)
         else:
             # Transmit two CRLF separators
-            self._transmit_line(str())
-            self._transmit_line(str())
+            Protocol.transmit_line(io)
+            Protocol.transmit_line(io)
