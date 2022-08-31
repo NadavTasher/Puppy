@@ -12,6 +12,7 @@ Artifact = NamedTuple(
 Request = NamedTuple(
     "Request",
     [
+        ("host", str),
         ("method", Literal["GET", "POST"]),
         ("location", str),
         ("parameters", Optional[Dict[str, str]]),

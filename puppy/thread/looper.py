@@ -9,6 +9,9 @@ class Looper(Thread):
         self._event = Event()
         self._parent = parent
 
+        # Initialize thread class
+        super(Looper, self).__init__()
+
     def loop(self):
         raise NotImplementedError()
 

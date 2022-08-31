@@ -1,10 +1,17 @@
-import socket
-from puppy.http import Browser, Options, JSON, Request, Header
+from puppy.http import Server, Response
 
-s = socket.socket()
-s.connect(("93.184.216.34", 80))
+def handle(request):
+	return Response(200, "OK", [], "Hello World!")
 
-o = Options(False, False)
-b = Browser(s, o)
+serv = Server(("0.0.0.0", 8000), handle)
+serv.start()
 
-print(b.post("/", {}, [Header("Host", "example.com"), Header("User-Agent", "test")]))
+# s = socket.socket()
+# s.connect(("127.0.0.1", 8000))
+
+# o = Options(False, False)
+# b = Browser(s, o)
+
+# print(b.post("/", {}, [Header("Host", "example.com"), Header("User-Agent", "test")]))
+
+serv.join()

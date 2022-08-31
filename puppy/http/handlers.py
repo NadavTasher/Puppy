@@ -3,7 +3,7 @@ import urllib
 
 # Import http classes
 from .types import Artifact, Request, Response
-from .protocol import Protocol, VERSION, OPTIONS
+from .protocol import Protocol, header, VERSION, OPTIONS
 
 
 class Client(object):
@@ -38,8 +38,11 @@ class Client(object):
         # Create HTTP header
         header = "%s %s HTTP/%.1f" % (request.method, location, VERSION)
 
+        # Create header list
+        headers = [Header("Host", request.host)] + request.headers
+
         # Create an artifact with the header
-        artifact = Artifact(header, request.headers, request.content)
+        artifact = Artifact(header, headers, request.content)
 
         # Transmit artifact
         return Protocol.transmit(io, artifact)
@@ -79,8 +82,11 @@ class Server(object):
                 # Add to dictionary
                 parameters[name] = value
 
+        # Find host header in headers
+        host = header("Host", artifact.headers)
+
         # Return created request
-        return Request(method, path, parameters, artifact.headers, artifact.content)
+        return Request(host, method, path, parameters, artifact.headers, artifact.content)
 
     @staticmethod
     def transmit(io, response, options=OPTIONS):

@@ -3,67 +3,69 @@ import socket
 import select
 
 # Import protocol classes
-from ..handler import _Server
+from ..protocol import header
+from ..handlers import Server as ServerHandler
 
 # Import looper classes
-from ...looper import Looper
+from ...thread import Server as SocketServer, Worker as SocketWorker
 
-class Server(Looper):
-	def __init__(self, address, handler):
-		# Initialize looper class
-		Looper.__init__(self)
 
+class Worker(SocketWorker):
+	def __init__(self, parent, handler):
 		# Set internal parameters
-		self._socket = None
-		self._address = address
+		self._close = None
 		self._handler = handler
 
-	def loop(self):
-		pass
-
-	def initialize(self):
-		# Create socket to listen on
-		self._socket = socket.socket()
-		self._socket.bind(self._address)
-		self._socket.listen(10)
-
-	def finalize(self):
-		# Close the listening socket
-		if not self._socket:
-			return
-		
-		# Close socket
-		self._socket.close()
-		self._socket = None
-
-class Worker(Looper):
-	# Internal variables
-	_socket = None
+		# Initialize looper class
+		super(Worker, self).__init__(parent)
 
 	def handle(self):
-		pass
+		# Receive request, handle, response
+		self.transmit(self._handler(self.receive()))
 
-	def loop(self):
-		# Check if there is data on the socket
-		has_data, _, _ = select.select([self._socket], [], [], 1)
+	def receive(self):
+		# Receive a request on the socket
+		request = ServerHandler.receive(self._socket)
 
-		# Make sure socket has data
-		if not has_data:
-			return
+		# Check connection state header
+		connection = header("Connection", request.headers)
 
-		# Handle request on socket
-		self.handle()
+		# Check if connection state header was set
+		if not connection:
+			# Default - close connection
+			self._close = True
+		else:
+			# Compare header to known close value
+			self._close = connection.lower() == "close"
+
+		# Return received request
+		return request
+
+	def transmit(self, response):
+		# Create new response headers
+		headers = [
+			# Close if connection should be closed, keep-alive otherwise
+			Header("Connection", "close" if self._close else "keep-alive")
+		] + response.headers
+
+		# Create new response (replace parameter)
+		response = response._replace(headers=headers)
+
+		# Transmit response on the socket
+		ServerHandler.transmit(self._socket, response)
+
+		# Stop worker if needed
+		if self._close:
+			self.stop()
 
 
-	def initialize(self):
-		# Accept a socket from the parent
-		self._socket, _ = self._parent._socket.accept()
+class Server(SocketServer):
+	def __init__(self, address, handler):
+		# Set handler function
+		self._handler = handler
 
-	def finalize(self):
-		# Make sure connection is set
-		if not self._socket:
-			return
+		# Initialize looper class
+		super(Server, self).__init__(address, self.child)
 
-		# Close connection
-		self._socket.close()
-		self._socket = None
+	def child(self, parent):
+		return Worker(parent, self._handler)

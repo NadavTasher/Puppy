@@ -13,6 +13,16 @@ CRLF = "\r\n"
 VERSION = 1.1
 OPTIONS = Options(linger=False, compress=False)
 
+def header(name, headers):
+    # Loop over headers
+    for key, value in headers:
+        # If wanted name equals found name, return value
+        if key.lower() == name.lower():
+            return value
+    
+    # Default return none
+    return None
+
 class Protocol(object):
     @staticmethod
     def receive(io):
@@ -71,27 +81,15 @@ class Protocol(object):
 
     @staticmethod
     def receive_content(io, headers):
-        # Create temporary variables
+        # Find all required headers
+        connection = header("Connection", headers)
+        content_type = header("Content-Type", headers)
+        content_length = header("Content-Length", headers)
+        content_encoding = header("Content-Encoding", headers)
+        transfer_encoding = header("Transfer-Encoding", headers)
+
+        # Create temporary content variable
         content = None
-        connection = None
-        content_type = None
-        content_length = None
-        content_encoding = None
-        transfer_encoding = None
-
-        # Loop over headers and check them
-        for name, value in headers:
-            # Convert name and value to lowercase
-            name, value = name.lower(), value.lower()
-
-            # Check header names and update
-            connection = value if name == "connection" else connection
-            content_type = value if name == "content-type" else content_type
-            content_length = value if name == "content-length" else content_length
-            content_encoding = value if name == "content-encoding" else content_encoding
-            transfer_encoding = (
-                value if name == "transfer-encoding" else transfer_encoding
-            )
 
         # Decide which content to receive
         if content_length:
