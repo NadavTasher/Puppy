@@ -33,3 +33,23 @@ Response = NamedTuple(
 # Create browser classes
 Cookie = NamedTuple("Cookie", [("name", str), ("value", str)])
 History = NamedTuple("History", [("request", Request), ("response", Response)])
+
+# Create interface and wrapper types
+class Interface(object):
+    def __init__(self):
+        pass
+
+    def receive(self):
+        raise NotImplementedError()
+
+    def transmit(self, argument):
+        raise NotImplementedError()
+
+
+class Wrapper(Interface):
+    def __init__(self, interface):
+        # Initialize parent class
+        super(Wrapper, self).__init__()
+
+        # Set internal variable
+        self._interface = interface

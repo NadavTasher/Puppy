@@ -1,11 +1,22 @@
-from puppy.http import Server, Response
+from puppy.http import Server, Response, HTTPInterface, HTTPConnectionStateWrapper
+from puppy.thread import Looper
 
 def handle(request):
 	return Response(200, "OK", [], "Hello World!")
 
-serv = Server(("0.0.0.0", 8000), handle)
+import socket
+
+lp = Looper()
+a = ("0.0.0.0", 8000)
+serv = Server(a, handle)
 serv.start()
 
+import time
+try:
+	while True:
+		time.sleep(1)
+finally:
+	serv.stop()
 # s = socket.socket()
 # s.connect(("127.0.0.1", 8000))
 
