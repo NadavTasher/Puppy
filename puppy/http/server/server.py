@@ -3,7 +3,7 @@ import socket
 import select
 
 # Import protocol classes
-from ..http import *
+from ..http import HTTPInterface, HTTPServerWrapper, HTTPCompressionWrapper, HTTPConnectionStateWrapper
 
 # Import looper classes
 from ...thread import SocketServer, SocketWorker
@@ -34,6 +34,8 @@ class Worker(SocketWorker):
 	def handle(self):
 		# Receive request, handle, response
 		self._interface.transmit(self._handler(self._interface.receive()))
+
+	# TODO: add this
 
 	# @property
 	# def running(self):

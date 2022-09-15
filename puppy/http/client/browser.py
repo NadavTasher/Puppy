@@ -6,7 +6,6 @@ import collections
 
 # Import other classes
 from ..types import Header, Request, History
-from ..client import Client
 from ..constants import DEFAULT_OPTIONS
 
 

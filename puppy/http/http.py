@@ -11,17 +11,6 @@ VERSION = 1.1
 OPTIONS = Options(linger=False, compress=False)
 
 
-def header(name, headers):
-    # Loop over headers
-    for key, value in headers:
-        # If wanted name equals found name, return value
-        if key.lower() == name.lower():
-            return value
-
-    # Default return none
-    return None
-
-
 class HTTPInterface(Interface):
     def __init__(self, io, options=OPTIONS):
         # Set internal variables
@@ -201,34 +190,36 @@ class HTTPInterface(Interface):
 
 
 class HTTPCompressionWrapper(Wrapper):
+    # Set internal variable
     _compress = False
 
     def receive(self):
         # Receive HTTP artifact
         artifact = self._interface.receive()
 
-        # Check headers for encoding headers
-        accept_encoding = header("Accept-Encoding", artifact.headers)
-        content_encoding = header("Content-Encoding", artifact.headers)
+        # Set encoding variable
+        encoding = None
 
-        # Update compression state
-        if not accept_encoding:
-            self._compress = False
-        else:
-            self._compress = "gzip" in accept_encoding
+        # Loop over headers and check them
+        for key, value in artifact.headers:
+            # Check if accept-encoding is set
+            if key.lower() == "accept-encoding":
+                # Check if gzip is supported
+                self._compress = "gzip" in value
 
-        # Decompress artifact content
-        if not content_encoding:
+            # Check if content-encoding is set
+            if key.lower() == "content-encoding":
+                encoding = value
+
+        # Check if encoding was set
+        if not encoding:
             return artifact
 
         # Make sure encoding is gzip
-        assert content_encoding == "gzip"
+        assert encoding.lower() == "gzip"
 
         # Decompress content as gzip
-        artifact = artifact._replace(content=zlib.decompress(artifact.content, 40))
-
-        # Return modified artifact
-        return artifact
+        return artifact._replace(content=zlib.decompress(artifact.content, 40))
 
     def transmit(self, artifact):
         # Check if compression is enabled
@@ -255,6 +246,7 @@ class HTTPCompressionWrapper(Wrapper):
 
 
 class HTTPConnectionStateWrapper(Wrapper):
+    # Set internal variable
     _linger = False
 
     def receive(self):
@@ -262,15 +254,15 @@ class HTTPConnectionStateWrapper(Wrapper):
         artifact = self._interface.receive()
 
         # Check connection state header
-        connection = header("Connection", artifact.headers)
-
-        # Check if connection state header was set
-        if not connection:
+        for key, value in artifact.headers:
+            # Check if connection header was set
+            if key.lower() == "connection":
+                # Compare header to known close value
+                self._linger = connection.lower() != "close"
+                break
+        else:
             # Default - close connection
             self._linger = False
-        else:
-            # Compare header to known close value
-            self._linger = connection.lower() != "close"
 
         # Return the artifact
         return artifact
@@ -341,8 +333,13 @@ class HTTPServerWrapper(Wrapper):
         # Parse HTTP header as request header
         method, location, _ = artifact.header.split(None, 2)
 
+        # Set host variable
+        host = None
+
         # Find host header in headers
-        host = header("Host", artifact.headers)
+        for key, value in artifact.headers:
+            if key.lower() == "host":
+                host = value
 
         # Initialize parameters (to be filled from query)
         parameters = dict()
