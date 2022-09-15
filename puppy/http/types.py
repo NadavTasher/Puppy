@@ -45,6 +45,9 @@ class Interface(object):
     def transmit(self, argument):
         raise NotImplementedError()
 
+    def close(self):
+        raise NotImplementedError()
+
 
 class Wrapper(Interface):
     def __init__(self, interface):
@@ -53,3 +56,12 @@ class Wrapper(Interface):
 
         # Set internal variable
         self._interface = interface
+
+    def receive(self):
+        return self._interface.receive()
+
+    def transmit(self, argument):
+        return self._interface.transmit(argument)
+
+    def close(self):
+        return self._interface.close()

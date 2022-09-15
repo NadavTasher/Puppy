@@ -14,7 +14,6 @@ class Browser(object):
     def __init__(self, io, options=DEFAULT_OPTIONS):
         # Client variables
         self._io = io
-        
         self._options = options
 
         # Create client object

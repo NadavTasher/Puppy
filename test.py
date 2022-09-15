@@ -2,6 +2,7 @@ from puppy.http import Server, Response, HTTPInterface, HTTPConnectionStateWrapp
 from puppy.thread import Looper
 
 def handle(request):
+	print(request)
 	return Response(200, "OK", [], "Hello World!")
 
 import socket

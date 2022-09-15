@@ -10,387 +10,378 @@ CRLF = "\r\n"
 VERSION = 1.1
 OPTIONS = Options(linger=False, compress=False)
 
+
 def header(name, headers):
-	# Loop over headers
-	for key, value in headers:
-		# If wanted name equals found name, return value
-		if key.lower() == name.lower():
-			return value
-	
-	# Default return none
-	return None
+    # Loop over headers
+    for key, value in headers:
+        # If wanted name equals found name, return value
+        if key.lower() == name.lower():
+            return value
+
+    # Default return none
+    return None
+
 
 class HTTPInterface(Interface):
-	def __init__(self, io, options=OPTIONS):
-		# Set internal variables
-		self._io = io
-		self._options = options
+    def __init__(self, io, options=OPTIONS):
+        # Set internal variables
+        self._io = io
+        self._options = options
 
-		# Initialize parent
-		super(HTTPInterface, self).__init__()
+        # Initialize parent
+        super(HTTPInterface, self).__init__()
 
-	def receive(self):
-		# Receive header line
-		header = self._receive_line()
+    def receive(self):
+        # Receive header line
+        header = self._receive_line()
 
-		# Receive all headers
-		headers = list(self._receive_headers())
+        # Receive all headers
+        headers = list(self._receive_headers())
 
-		# Receive content (with headers)
-		content = self._receive_content(headers)
+        # Receive content (with headers)
+        content = self._receive_content(headers)
 
-		# Return artifact
-		return Artifact(header, headers, content)
+        # Return artifact
+        return Artifact(header, headers, content)
 
+    def _receive_line(self):
+        # Initialize buffer
+        buffer = str()
 
-	def _receive_line(self):
-		# Initialize buffer
-		buffer = str()
+        # Read until the CRLF exists
+        while CRLF not in buffer:
+            # Receive one byte into the buffer
+            buffer += self._io.recv(1)
+            # TODO: fix bug
 
-		# Read until the CRLF exists
-		while CRLF not in buffer:
-			# Receive one byte into the buffer
-			buffer += self._io.recv(1)
-			# TODO: fix bug
+        # Return received buffer
+        return buffer[: -len(CRLF)]
 
-		# Return received buffer
-		return buffer[: -len(CRLF)]
+    def _receive_lines(self):
+        # Initialize line variable
+        line = None
 
+        # Yield lines until the line length is 0
+        while line != str():
+            # Yield the value if exists
+            if line:
+                yield line
 
-	def _receive_lines(self):
-		# Initialize line variable
-		line = None
+            # Read next line
+            line = self._receive_line()
 
-		# Yield lines until the line length is 0
-		while line != str():
-			# Yield the value if exists
-			if line:
-				yield line
+    def _receive_headers(self):
+        # Receive all headers
+        for line in self._receive_lines():
+            # Validate header line
+            if ":" not in line:
+                continue
 
-			# Read next line
-			line = self._receive_line()
+            # Split header into name and value
+            name, value = line.split(":", 1)
 
+            # Yield new header
+            yield Header(name.strip(), value.strip())
 
-	def _receive_headers(self):
-		# Receive all headers
-		for line in self._receive_lines():
-			# Validate header line
-			if ":" not in line:
-				continue
+    def _receive_content(self, headers):
+        # Set the content flag ahead of time
+        content = False
 
-			# Split header into name and value
-			name, value = line.split(":", 1)
+        # Loop over all headers and set values
+        for key, value in headers:
+            # Change key to lower case
+            key = key.lower()
 
-			# Yield new header
-			yield Header(name.strip(), value.strip())
+            # Check if the content-length header is set
+            if key == "content-length":
+                return self._receive_content_by_length(value)
 
+            # Check if the transfer-encoding header is set
+            if key == "transfer-encoding":
+                return self._receive_content_by_chunks()
 
-	def _receive_content(self, headers):
-		# Find all required headers
-		connection = header("Connection", headers)
-		content_type = header("Content-Type", headers)
-		content_length = header("Content-Length", headers)
-		content_encoding = header("Content-Encoding", headers)
-		transfer_encoding = header("Transfer-Encoding", headers)
+            # Check if the content-type header is set
+            if key == "content-type":
+                content = True
 
-		# Create temporary content variable
-		content = None
+        # Check if should receive body
+        if content:
+            return self._receive_content_by_stream()
 
-		# Decide which content to receive
-		if content_length:
-			# Receive content by length
-			content = self._receive_content_by_length(content_length)
-		elif transfer_encoding:
-			# Make sure encoding is chunked
-			assert transfer_encoding == "chunked"
+        # Return none by default
+        return None
 
-			# Receive content by chunks
-			content = self._receive_content_by_chunks()
-		elif content_type:
-			# Make sure connection is set to closed
-			assert connection == "close"
+    def _receive_content_by_length(self, length):
+        return self._io.recv(int(length))
 
-			# Receive content by stream
-			content = self._receive_content_by_stream()
-		else:
-			# No content to be received
-			return None
+    def _receive_content_by_chunks(self):
+        # Initialize buffer and length
+        buffer = str()
+        length = None
 
-		# Return content string
-		return content
+        # Read chunks until the length is 0
+        while length != 0:
+            # Check if length is defined
+            if length:
+                # Read and yield
+                buffer += self._io.recv(length)
 
+                # Receive line separator
+                self._receive_line()
 
-	def _receive_content_by_length(self, length):
-		return self._io.recv(int(length))
+            # Receive next length
+            length = int(self._receive_line(), 16)
 
+        # Return buffer
+        return buffer
 
-	def _receive_content_by_chunks(self):
-		# Initialize buffer and length
-		buffer = str()
-		length = None
+    def _receive_content_by_stream(self):
+        # Initialize buffer and temporary
+        buffer = str()
+        temporary = None
 
-		# Read chunks until the length is 0
-		while length != 0:
-			# Check if length is defined
-			if length:
-				# Read and yield
-				buffer += self._io.recv(length)
+        # Loop until no bytes are left
+        while temporary != str():
+            # Push temporary value to buffer
+            if temporary:
+                buffer += temporary
 
-				# Receive line separator
-				self._receive_line()
+            # Read next byte
+            temporary = self._io.recv(1)
 
-			# Receive next length
-			length = int(self._receive_line(), 16)
+        # Return buffer
+        return buffer
 
-		# Return buffer
-		return buffer
+    def transmit(self, artifact):
+        # Transmit HTTP header
+        self._transmit_line(artifact.header)
 
+        # Transmit all headers
+        self._transmit_headers(artifact.headers)
 
-	def _receive_content_by_stream(self):
-		# Initialize buffer and temporary
-		buffer = str()
-		temporary = None
+        # Transmit content
+        self._transmit_content(artifact.content)
 
-		# Loop until no bytes are left
-		while temporary != str():
-			# Push temporary value to buffer
-			if temporary:
-				buffer += temporary
+    def _transmit_line(self, line=None):
+        # Write given line if defined
+        if line:
+            self._io.send(line)
 
-			# Read next byte
-			temporary = self._io.recv(1)
+        # Write HTTP line separator
+        self._io.send(CRLF)
 
-		# Return buffer
-		return buffer
+    def _transmit_header(self, header):
+        # Write header with name: value format
+        self._transmit_line("%s: %s" % (header.name, header.value))
 
+    def _transmit_headers(self, headers):
+        # Loop over each header and transmit it
+        for header in headers:
+            self._transmit_header(header)
 
-	def transmit(self, artifact):
-		# Transmit HTTP header
-		self._transmit_line(artifact.header)
+    def _transmit_content(self, content):
+        # Check if content is even defined
+        if content:
+            # Transmit content-length header
+            self._transmit_header(Header("Content-Length", str(len(content))))
 
-		# Transmit all headers
-		self._transmit_headers(artifact.headers)
+            # Transmit CRLF separator
+            self._transmit_line()
 
-		# Transmit content
-		self._transmit_content(artifact.content)
+            # Transmit complete contents
+            self._io.send(content)
+        else:
+            # Transmit two CRLF separators
+            self._transmit_line()
+            self._transmit_line()
 
+    def close(self):
+        # Close socket!
+        self._io.close()
 
-	def _transmit_line(self, line=None):
-		# Write given line if defined
-		if line:
-			self._io.send(line)
-
-		# Write HTTP line separator
-		self._io.send(CRLF)
-
-
-	def _transmit_header(self, header):
-		# Write header with name: value format
-		self._transmit_line("%s: %s" % (header.name, header.value))
-
-
-	def _transmit_headers(self, headers):
-		# Loop over each header and transmit it
-		for header in headers:
-			self._transmit_header(header)
-
-
-	def _transmit_content(self, content):
-		# Check if content is even defined
-		if content:
-			# Transmit content-length header
-			self._transmit_header(Header("Content-Length", str(len(content))))
-
-			# Transmit CRLF separator
-			self._transmit_line()
-
-			# Transmit complete contents
-			self._io.send(content)
-		else:
-			# Transmit two CRLF separators
-			self._transmit_line()
-			self._transmit_line()
 
 class HTTPCompressionWrapper(Wrapper):
-	_compress = False
+    _compress = False
 
-	def receive(self):
-		# Receive HTTP artifact
-		artifact = self._interface.receive()
+    def receive(self):
+        # Receive HTTP artifact
+        artifact = self._interface.receive()
 
-		# Check headers for encoding headers
-		accept_encoding = header("Accept-Encoding", artifact.headers)
-		content_encoding = header("Content-Encoding", artifact.headers)
+        # Check headers for encoding headers
+        accept_encoding = header("Accept-Encoding", artifact.headers)
+        content_encoding = header("Content-Encoding", artifact.headers)
 
-		# Update compression state
-		if not accept_encoding:
-			self._compress = False
-		else:
-			self._compress = "gzip" in accept_encoding
+        # Update compression state
+        if not accept_encoding:
+            self._compress = False
+        else:
+            self._compress = "gzip" in accept_encoding
 
-		# Decompress artifact content
-		if not content_encoding:
-			return artifact
+        # Decompress artifact content
+        if not content_encoding:
+            return artifact
 
-		# Make sure encoding is gzip
-		assert content_encoding == "gzip"
+        # Make sure encoding is gzip
+        assert content_encoding == "gzip"
 
-		# Decompress content as gzip
-		artifact = artifact._replace(content=zlib.decompress(artifact.content, 40))
-		
-		# Return modified artifact
-		return artifact
-		
-	def transmit(self, artifact):
-		# Check if compression is enabled
-		if self._compress:
-			# Fetch artifact headers and content
-			headers = artifact.headers
-			content = artifact.content
+        # Decompress content as gzip
+        artifact = artifact._replace(content=zlib.decompress(artifact.content, 40))
 
-			# Add encoding headers
-			headers.append(Header("Accept-Encoding", "gzip, deflate"))
-			headers.append(Header("Content-Encoding", "gzip"))
+        # Return modified artifact
+        return artifact
 
-			# Compress content using gzip
-			temporary = StringIO.StringIO()
-			with gzip.GzipFile(fileobj=temporary, mode="w") as compressor:
-				compressor.write(content)
-			content = temporary.getvalue()
+    def transmit(self, artifact):
+        # Check if compression is enabled
+        if self._compress:
+            # Fetch artifact headers and content
+            headers = artifact.headers
+            content = artifact.content
 
-			# Modify artifact with updated values
-			artifact = artifact._replace(headers=headers, content=content)
+            # Add encoding headers
+            headers.append(Header("Accept-Encoding", "gzip, deflate"))
+            headers.append(Header("Content-Encoding", "gzip"))
 
-		# Transmit artifact
-		return self._interface.transmit(artifact)
+            # Compress content using gzip
+            temporary = StringIO.StringIO()
+            with gzip.GzipFile(fileobj=temporary, mode="w") as compressor:
+                compressor.write(content)
+            content = temporary.getvalue()
+
+            # Modify artifact with updated values
+            artifact = artifact._replace(headers=headers, content=content)
+
+        # Transmit artifact
+        return self._interface.transmit(artifact)
+
 
 class HTTPConnectionStateWrapper(Wrapper):
-	_linger = False
+    _linger = False
 
-	def receive(self):
-		# Receive an artifact
-		artifact = self._interface.receive()
+    def receive(self):
+        # Receive an artifact
+        artifact = self._interface.receive()
 
-		# Check connection state header
-		connection = header("Connection", artifact.headers)
+        # Check connection state header
+        connection = header("Connection", artifact.headers)
 
-		# Check if connection state header was set
-		if not connection:
-			# Default - close connection
-			self._linger = False
-		else:
-			# Compare header to known close value
-			self._linger = connection.lower() != "close"
+        # Check if connection state header was set
+        if not connection:
+            # Default - close connection
+            self._linger = False
+        else:
+            # Compare header to known close value
+            self._linger = connection.lower() != "close"
 
-		# Return the artifact
-		return artifact
+        # Return the artifact
+        return artifact
 
-	def transmit(self, artifact):
-		# Fetch artifact headers
-		headers = artifact.headers
+    def transmit(self, artifact):
+        # Fetch artifact headers
+        headers = artifact.headers
 
-		# Add connection headers as needed
-		headers.append(Header("Connection", "keep-alive" if self._linger else "close"))
-		
-		# Modify artifact headers
-		artifact = artifact._replace(headers=headers)
+        # Add connection headers as needed
+        headers.append(Header("Connection", "keep-alive" if self._linger else "close"))
 
-		# Transmit artifact as needed
-		self._interface.transmit(artifact)
+        # Modify artifact headers
+        artifact = artifact._replace(headers=headers)
 
-		# Close socket if needed
-		if not self._linger:
-			# self._io.close()
-			print("Should close!")
+        # Transmit artifact as needed
+        self._interface.transmit(artifact)
+
+        # Close socket if needed
+        if not self._linger:
+            self.close()
 
 
 class HTTPClientWrapper(Wrapper):
-	def receive(self):
-		# Receive artifact from parent
-		artifact = self._interface.receive()
+    def receive(self):
+        # Receive artifact from parent
+        artifact = self._interface.receive()
 
-		# Parse HTTP header as response header
-		_, status, message = artifact.header.split(None, 2)
+        # Parse HTTP header as response header
+        _, status, message = artifact.header.split(None, 2)
 
-		# Convert status to int
-		status = int(status)
+        # Convert status to int
+        status = int(status)
 
-		# Return created response
-		return Response(status, message, artifact.headers, artifact.content)
+        # Return created response
+        return Response(status, message, artifact.headers, artifact.content)
 
-	def transmit(self, request, options=OPTIONS):
-		# Create location string
-		location = request.location
+    def transmit(self, request, options=OPTIONS):
+        # Create location string
+        location = request.location
 
-		# Check if request parameters have to be added
-		if request.parameters:
-			location += "?" + "&".join(
-				[
-					"%s=%s" % (urllib.quote(name), urllib.quote(value))
-					for name, value in request.parameters.items()
-				]
-			)
+        # Check if request parameters have to be added
+        if request.parameters:
+            location += "?" + "&".join(
+                [
+                    "%s=%s" % (urllib.quote(name), urllib.quote(value))
+                    for name, value in request.parameters.items()
+                ]
+            )
 
-		# Create HTTP header
-		header = "%s %s HTTP/%.1f" % (request.method, location, VERSION)
+        # Create HTTP header
+        header = "%s %s HTTP/%.1f" % (request.method, location, VERSION)
 
-		# Create header list
-		headers = [Header("Host", request.host)] + request.headers
+        # Create header list
+        headers = [Header("Host", request.host)] + request.headers
 
-		# Create an artifact with the header
-		artifact = Artifact(header, headers, request.content)
+        # Create an artifact with the header
+        artifact = Artifact(header, headers, request.content)
 
-		# Transmit artifact
-		return self._interface.transmit(artifact)
+        # Transmit artifact
+        return self._interface.transmit(artifact)
 
 
 class HTTPServerWrapper(Wrapper):
-	def receive(self):
-		# Receive artifact from parent
-		artifact = self._interface.receive()
+    def receive(self):
+        # Receive artifact from parent
+        artifact = self._interface.receive()
 
-		# Parse HTTP header as request header
-		method, location, _ = artifact.header.split(None, 2)
-		
-		# Find host header in headers
-		host = header("Host", artifact.headers)
+        # Parse HTTP header as request header
+        method, location, _ = artifact.header.split(None, 2)
 
-		# Initialize parameters (to be filled from query)
-		parameters = dict()
+        # Find host header in headers
+        host = header("Host", artifact.headers)
 
-		# Split location to path and query string
-		if "?" in location:
-			path, query = location.split("?", 1)
+        # Initialize parameters (to be filled from query)
+        parameters = dict()
 
-			# Split query by amp and parse parameters
-			for parameter in query.split("&"):
-				# Check if parameter contains "="
-				if "=" not in parameter:
-					continue
+        # Split location to path and query string
+        if "?" in location:
+            path, query = location.split("?", 1)
 
-				# Split parameter
-				name, value = parameter.split("=", 1)
+            # Split query by amp and parse parameters
+            for parameter in query.split("&"):
+                # Check if parameter contains "="
+                if "=" not in parameter:
+                    continue
 
-				# Parse as encoded parameters
-				name, value = urllib.unquote(name.strip()), urllib.unquote(
-					value.strip()
-				)
+                # Split parameter
+                name, value = parameter.split("=", 1)
 
-				# Add to dictionary
-				parameters[name] = value
-			
-			# Return created request
-			return Request(host, method, path, parameters, artifact.headers, artifact.content)
+                # Parse as encoded parameters
+                name, value = urllib.unquote(name.strip()), urllib.unquote(
+                    value.strip()
+                )
 
-		# Return created request
-		return Request(host, method, location, None, artifact.headers, artifact.content)
+                # Add to dictionary
+                parameters[name] = value
 
-	def transmit(self, response):
-		# Create HTTP header
-		header = "HTTP/%.1f %d %s" % (VERSION, response.status, response.message)
+            # Return created request
+            return Request(
+                host, method, path, parameters, artifact.headers, artifact.content
+            )
 
-		# Create an artifact with the header
-		artifact = Artifact(header, response.headers, response.content)
+        # Return created request
+        return Request(host, method, location, None, artifact.headers, artifact.content)
 
-		# Transmit artifact
-		return self._interface.transmit(artifact)
+    def transmit(self, response):
+        # Create HTTP header
+        header = "HTTP/%.1f %d %s" % (VERSION, response.status, response.message)
+
+        # Create an artifact with the header
+        artifact = Artifact(header, response.headers, response.content)
+
+        # Transmit artifact
+        return self._interface.transmit(artifact)
