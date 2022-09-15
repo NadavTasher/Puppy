@@ -1,9 +1,12 @@
 from puppy.http import Server, Response, HTTPInterface, HTTPConnectionStateWrapper
-from puppy.thread import Looper
+from puppy.thread import Looper, Process
+
+p = Process("tcpdump -i any 'tcp'")
 
 def handle(request):
-	print(request)
-	return Response(200, "OK", [], "Hello World!")
+	return Response(200, "OK", [], "".join(list(p.readlines())))
+
+	# return Response(200, "OK", [], "Hello World!")
 
 import socket
 
@@ -11,6 +14,7 @@ lp = Looper()
 a = ("0.0.0.0", 8000)
 serv = Server(a, handle)
 serv.start()
+p.start()
 
 import time
 try:
@@ -18,6 +22,7 @@ try:
 		time.sleep(1)
 finally:
 	serv.stop()
+	p.stop()
 # s = socket.socket()
 # s.connect(("127.0.0.1", 8000))
 

@@ -3,11 +3,11 @@ from threading import Thread, Event, Lock
 
 
 class Looper(Thread):
-    def __init__(self, parent=None):
+    def __init__(self):
         # Initialize internal variables
         self._lock = Lock()
         self._event = Event()
-        self._parent = parent
+        self._parent = None
 
         # Initialize thread class
         super(Looper, self).__init__()
@@ -21,14 +21,19 @@ class Looper(Thread):
         self.finalize()
         return False
 
-    def loop(self):
-        raise NotImplementedError()
-
-    def initialize(self):
-        pass
-
-    def finalize(self):
-        pass
+    def run(self):
+        # Use context manager
+        with self:
+            # Loop until shutdown
+            try:
+                while self.running:
+                    # Acquire lock before looping
+                    with self._lock:
+                        # Execute single loop
+                        self.loop()
+            finally:
+                # Stop self to kill children
+                self.stop()
 
     @property
     def running(self):
@@ -61,15 +66,16 @@ class Looper(Thread):
         if wait:
             self.join()
 
-    def run(self):
-        # Use context manager
-        with self:
-            # Loop until shutdown
-            try:
-                while self.running:
-                    # Acquire lock before looping
-                    with self._lock:
-                        self.loop()
-            finally:
-                # Stop self to kill children
-                self.stop()
+    def adopt(self, parent):
+        # Set the new parent and return child
+        self._parent = parent
+        return self
+
+    def loop(self):
+        raise NotImplementedError()
+
+    def initialize(self):
+        pass
+
+    def finalize(self):
+        pass

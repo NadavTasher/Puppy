@@ -10,13 +10,13 @@ from ...thread import SocketServer, SocketWorker
 
 
 class Worker(SocketWorker):
-	def __init__(self, parent, handler):
+	def __init__(self, handler):
 		# Set internal parameters
 		self._handler = handler
 		self._interface = None
 
 		# Initialize looper class
-		super(Worker, self).__init__(parent)
+		super(Worker, self).__init__()
 
 	def initialize(self):
 		# Initialize parent
@@ -49,4 +49,4 @@ class Server(SocketServer):
 		super(Server, self).__init__(address)
 
 	def child(self):
-		return Worker(self, self._handler)
+		return Worker(self._handler).adopt(self)

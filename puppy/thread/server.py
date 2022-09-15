@@ -7,56 +7,60 @@ from .looper import Looper
 
 
 class SocketWorker(Looper):
-	# Set internal parameters
-	_socket = None
+    def __init__(self):
+        # Set internal parameters
+        self._socket = None
 
-	@property
-	def event(self):
-		# Check if there is an evnet on the socket
-		has_event, _, _ = select.select([self._socket], [], [], 1)
+        # Initialize looper class
+        super(SocketWorker, self).__init__()
 
-		# Make sure socket has an event
-		return bool(has_event)
+    @property
+    def event(self):
+        # Check if there is an evnet on the socket
+        has_event, _, _ = select.select([self._socket], [], [], 1)
 
-	def handle(self):
-		raise NotImplementedError()
+        # Make sure socket has an event
+        return bool(has_event)
 
-	def loop(self):
-		# Check if the worker has an event
-		if self.event:
-			self.handle()
+    def handle(self):
+        raise NotImplementedError()
 
-	def initialize(self):
-		# Accept a socket from the parent
-		self._socket, _ = self._parent._socket.accept()
+    def loop(self):
+        # Check if the worker has an event
+        if self.event:
+            self.handle()
 
-	def finalize(self):
-		# Make sure connection is set
-		if not self._socket:
-			return
+    def initialize(self):
+        # Accept a socket from the parent
+        self._socket, _ = self._parent._socket.accept()
 
-		# Close connection
-		self._socket.close()
-		self._socket = None
+    def finalize(self):
+        # Make sure connection is set
+        if not self._socket:
+            return
+
+        # Close connection
+        self._socket.close()
+        self._socket = None
 
 
 class SocketServer(SocketWorker):
-	def __init__(self, address):
-		# Set internal parameters
-		self._address = address
+    def __init__(self, address):
+        # Set internal parameters
+        self._address = address
 
-		# Initialize looper class
-		super(SocketServer, self).__init__()
+        # Initialize looper class
+        super(SocketServer, self).__init__()
 
-	def initialize(self):
-		# Create socket to listen on
-		self._socket = socket.socket()
-		self._socket.bind(self._address)
-		self._socket.listen(10)
+    def initialize(self):
+        # Create socket to listen on
+        self._socket = socket.socket()
+        self._socket.bind(self._address)
+        self._socket.listen(10)
 
-	def handle(self):
-		# Create a new worker and start it
-		self.child().start()
+    def handle(self):
+        # Create a new worker and start it
+        self.child().start()
 
-	def child(self):
-		return SocketWorker(self)
+    def child(self):
+        return SocketWorker().adopt(self)
