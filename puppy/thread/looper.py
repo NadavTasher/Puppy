@@ -5,9 +5,9 @@ from threading import Thread, Event, Lock
 class Looper(Thread):
     def __init__(self, parent=None):
         # Initialize internal variables
-        self.lock = Lock()
-        self.event = Event()
-        self.parent = parent
+        self._lock = Lock()
+        self._event = Event()
+        self._parent = parent
 
         # Initialize thread class
         super(Looper, self).__init__()
@@ -33,12 +33,12 @@ class Looper(Thread):
     @property
     def running(self):
         # Check if event is set
-        if self.event.is_set():
+        if self._event.is_set():
             return False
 
         # Check if parent is running
-        if self.parent:
-            if not self.parent.running:
+        if self._parent:
+            if not self._parent.running:
                 return False
 
         # Still running!
@@ -46,7 +46,7 @@ class Looper(Thread):
 
     def reset(self):
         # Acquire the lock and restart
-        with self.lock:
+        with self._lock:
             # Finalize the looper
             self.finalize()
 
@@ -55,7 +55,7 @@ class Looper(Thread):
 
     def stop(self, wait=False):
         # Set the event
-        self.event.set()
+        self._event.set()
 
         # Wait for the thread to finish
         if wait:
@@ -68,7 +68,7 @@ class Looper(Thread):
             try:
                 while self.running:
                     # Acquire lock before looping
-                    with self.lock:
+                    with self._lock:
                         self.loop()
             finally:
                 # Stop self to kill children
