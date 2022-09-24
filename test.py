@@ -1,10 +1,16 @@
-from puppy.http import Server, Response, HTTPInterface, HTTPConnectionStateWrapper
+from puppy.http import HTTPClient, HTTPServer, Request, Response, HTTPInterface, HTTPConnectionStateWrapper
 from puppy.thread import Looper, Process
+from puppy.test.mock import Mock
+from puppy.typing import wrapper
 
-p = Process("tcpdump -i any 'tcp'")
+p = Process("tcpdump -i any 'tcp and port 8000'")
 
 def handle(request):
-	return Response(200, "OK", [], "".join(list(p.readlines())))
+	if request.parameters and "limit" in request.parameters:
+		lines = p.readlines()[:int(request.parameters["limit"])]
+	else:
+		lines = list(p.readlines())
+	return Response(200, "OK", [], "".join(lines))
 
 	# return Response(200, "OK", [], "Hello World!")
 
@@ -12,23 +18,39 @@ import socket
 
 lp = Looper()
 a = ("0.0.0.0", 8000)
-serv = Server(a, handle)
-serv.start()
-p.start()
+serv = HTTPServer(a, handle)
+# serv.start()
+# p.start()
 
-import time
-try:
-	while True:
-		time.sleep(1)
-finally:
-	serv.stop()
-	p.stop()
-# s = socket.socket()
-# s.connect(("127.0.0.1", 8000))
+# import time
+# try:
+# 	# while True:
+# 	# 	time.sleep(1)
+# 	time.sleep(1)
+# 	s = socket.socket()
+# 	s.connect(("93.184.216.34", 80))
+# 	s2 = Mock(s)
+# 	cli = HTTPClient(s2)
+# 	print(cli.request("GET", "/", "example.com"))
+# finally:
+# 	time.sleep(1)
+# 	serv.stop()
+# 	p.stop()
+
+client = HTTPClient()
+
+class printer(wrapper):
+	def request(self, *args, **kwargs):
+		print(self, args, kwargs)
+
+client2 = printer(client)
+
+print(client2.get("http://example.com:80/"))
+
 
 # o = Options(False, False)
 # b = Browser(s, o)
 
 # print(b.post("/", {}, [Header("Host", "example.com"), Header("User-Agent", "test")]))
 
-serv.join()
+# serv.join()

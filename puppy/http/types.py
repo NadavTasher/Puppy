@@ -2,7 +2,6 @@
 from ..typing import *
 
 # Create interface classes
-Options = NamedTuple("Options", [("linger", bool), ("compress", bool)])
 Header = NamedTuple("Header", [("name", str), ("value", str)])
 Artifact = NamedTuple(
     "Artifact", [("header", str), ("headers", List[Header]), ("content", Optional[str])]
@@ -29,10 +28,6 @@ Response = NamedTuple(
         ("content", Optional[str]),
     ],
 )
-
-# Create browser classes
-Cookie = NamedTuple("Cookie", [("name", str), ("value", str)])
-History = NamedTuple("History", [("request", Request), ("response", Response)])
 
 # Create interface and wrapper types
 class Interface(object):

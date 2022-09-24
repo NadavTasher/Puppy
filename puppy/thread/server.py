@@ -6,17 +6,17 @@ import select
 from .looper import Looper
 
 
-class SocketWorker(Looper):
+class Worker(Looper):
     def __init__(self):
         # Set internal parameters
         self._socket = None
 
         # Initialize looper class
-        super(SocketWorker, self).__init__()
+        super(Worker, self).__init__()
 
     @property
-    def event(self):
-        # Check if there is an evnet on the socket
+    def poll(self):
+        # Check if there is an event on the socket
         has_event, _, _ = select.select([self._socket], [], [], 1)
 
         # Make sure socket has an event
@@ -27,7 +27,7 @@ class SocketWorker(Looper):
 
     def loop(self):
         # Check if the worker has an event
-        if self.event:
+        if self.poll:
             self.handle()
 
     def initialize(self):
@@ -44,13 +44,13 @@ class SocketWorker(Looper):
         self._socket = None
 
 
-class SocketServer(SocketWorker):
+class Server(Worker):
     def __init__(self, address):
         # Set internal parameters
         self._address = address
 
         # Initialize looper class
-        super(SocketServer, self).__init__()
+        super(Server, self).__init__()
 
     def initialize(self):
         # Create socket to listen on
@@ -63,4 +63,4 @@ class SocketServer(SocketWorker):
         self.child().start()
 
     def child(self):
-        return SocketWorker().adopt(self)
+        return Worker().adopt(self)

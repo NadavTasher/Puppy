@@ -3,19 +3,17 @@ import gzip
 import StringIO
 
 # Import required types
-from .types import Interface, Wrapper, Header, Artifact, Request, Response, Options
+from .types import Interface, Wrapper, Header, Artifact, Request, Response
 
 # Operating constants
 CRLF = "\r\n"
 VERSION = 1.1
-OPTIONS = Options(linger=False, compress=False)
 
 
 class HTTPInterface(Interface):
-    def __init__(self, io, options=OPTIONS):
+    def __init__(self, io):
         # Set internal variables
         self._io = io
-        self._options = options
 
         # Initialize parent
         super(HTTPInterface, self).__init__()
@@ -247,7 +245,7 @@ class HTTPCompressionWrapper(Wrapper):
 
 class HTTPConnectionStateWrapper(Wrapper):
     # Set internal variable
-    _linger = False
+    _linger = True
 
     def receive(self):
         # Receive an artifact
@@ -258,7 +256,7 @@ class HTTPConnectionStateWrapper(Wrapper):
             # Check if connection header was set
             if key.lower() == "connection":
                 # Compare header to known close value
-                self._linger = connection.lower() != "close"
+                self._linger = value.lower() != "close"
                 break
         else:
             # Default - close connection
@@ -299,7 +297,7 @@ class HTTPClientWrapper(Wrapper):
         # Return created response
         return Response(status, message, artifact.headers, artifact.content)
 
-    def transmit(self, request, options=OPTIONS):
+    def transmit(self, request):
         # Create location string
         location = request.location
 

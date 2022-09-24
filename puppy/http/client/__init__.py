@@ -1,2 +1,2 @@
-from .browser import *
+from .client import *
 from .generators import *

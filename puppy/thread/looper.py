@@ -12,11 +12,14 @@ class Looper(Thread):
         # Initialize thread class
         super(Looper, self).__init__()
 
+    def __repr__(self):
+        return "<%s running=%r>" % (self.__class__.__name__, self.running)
+
     def __enter__(self):
         # Initialize self
         self.initialize()
 
-    def __exit__(self, *_):
+    def __exit__(self, *args):
         # Finalize self
         self.finalize()
         return False

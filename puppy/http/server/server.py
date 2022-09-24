@@ -6,21 +6,21 @@ import select
 from ..http import HTTPInterface, HTTPServerWrapper, HTTPCompressionWrapper, HTTPConnectionStateWrapper
 
 # Import looper classes
-from ...thread import SocketServer, SocketWorker
+from ...thread import Server, Worker
 
 
-class Worker(SocketWorker):
+class HTTPWorker(Worker):
 	def __init__(self, handler):
 		# Set internal parameters
 		self._handler = handler
 		self._interface = None
 
 		# Initialize looper class
-		super(Worker, self).__init__()
+		super(HTTPWorker, self).__init__()
 
 	def initialize(self):
 		# Initialize parent
-		super(Worker, self).initialize()
+		super(HTTPWorker, self).initialize()
 
 		# Create HTTP interface
 		self._interface = HTTPServerWrapper(
@@ -42,13 +42,13 @@ class Worker(SocketWorker):
 	#     # Check if socket is closed
 	#     return super(Worker, self).running and not self._socket._closed
 
-class Server(SocketServer):
+class HTTPServer(Server):
 	def __init__(self, address, handler):
 		# Set handler function
 		self._handler = handler
 
 		# Initialize looper class
-		super(Server, self).__init__(address)
+		super(HTTPServer, self).__init__(address)
 
 	def child(self):
-		return Worker(self._handler).adopt(self)
+		return HTTPWorker(self._handler).adopt(self)
