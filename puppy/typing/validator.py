@@ -28,7 +28,6 @@ def validate(value, validator):
 
 
 class validator(object):
-	# Decorator for creating types
 	def __init__(self, function):
 		self.function = function
 

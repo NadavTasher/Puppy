@@ -42,10 +42,15 @@ client = HTTPClient()
 class printer(wrapper):
 	def request(self, *args, **kwargs):
 		print(self, args, kwargs)
+		return self.rebound.request(*args, **kwargs)
+
+	def get(self, *args, **kwargs):
+		print("Interrupted!")
+		return self.rebound.get(*args, **kwargs)
 
 client2 = printer(client)
 
-print(client2.get("http://example.com:80/"))
+print(client2.get("http://example.com/"))
 
 
 # o = Options(False, False)

@@ -2,8 +2,12 @@
 import socket
 import select
 
-# Import protocol classes
-from ..http import HTTPInterface, HTTPServerWrapper, HTTPCompressionWrapper, HTTPConnectionStateWrapper
+# Import HTTP classes
+from ..interface import HTTPInterface
+from ..wrappers import HTTPCompressionWrapper, HTTPConnectionStateWrapper
+
+# Import server interface
+from .interface import HTTPServerWrapper
 
 # Import looper classes
 from ...thread import Server, Worker

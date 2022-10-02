@@ -4,19 +4,20 @@ import socket
 import urllib
 import collections
 
-# Import other classes
-from ..http import (
-    HTTPInterface,
-    HTTPClientWrapper,
-    HTTPCompressionWrapper,
-    HTTPConnectionStateWrapper,
-)
+# Import HTTP classes
+from ..interface import HTTPInterface
+from ..wrappers import HTTPCompressionWrapper, HTTPConnectionStateWrapper
+
+# Import client interface
+from .interface import HTTPClientWrapper
+
+# Import HTTP types
 from ..types import Header, Request
 
 # Import local types
 from .types import History, Options
 
-# Import url parser
+# Import URL parser
 from .parser import parse
 
 

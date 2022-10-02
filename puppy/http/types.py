@@ -28,35 +28,3 @@ Response = NamedTuple(
         ("content", Optional[str]),
     ],
 )
-
-# Create interface and wrapper types
-class Interface(object):
-    def __init__(self):
-        pass
-
-    def receive(self):
-        raise NotImplementedError()
-
-    def transmit(self, argument):
-        raise NotImplementedError()
-
-    def close(self):
-        raise NotImplementedError()
-
-
-class Wrapper(Interface):
-    def __init__(self, interface):
-        # Initialize parent class
-        super(Wrapper, self).__init__()
-
-        # Set internal variable
-        self._interface = interface
-
-    def receive(self):
-        return self._interface.receive()
-
-    def transmit(self, argument):
-        return self._interface.transmit(argument)
-
-    def close(self):
-        return self._interface.close()
