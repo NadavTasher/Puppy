@@ -64,10 +64,10 @@ class Process(Looper):
 
 		# Create the process
 		self._process = subprocess.Popen(
-			["sh", "-c", self.command],
+			self.command,
 			stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE,
-			shell=False,
+			shell=True,
 		)
 
 	def finalize(self):
