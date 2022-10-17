@@ -64,3 +64,35 @@ def resolve(path, packed):
     else:
         # Fetch the last node
         return packed[path]
+
+def pyzip(output, path, command):
+    # Import pyzip entrypoint template
+    import pyzip
+
+    # Create packed path
+    filesystem = pack(path, ignored=["__pycache__", ".pyc"])
+    filesystem = base64.b64encode(zlib.compress(repr(filesystem)))
+
+    # Load packer code from file
+    with open(__file__, "rb") as packer:
+        code = packer.read()
+
+    # Create entrypoint from pyzip
+    with open(pyzip.__file__, "rb") as template:
+        code += template.read()
+
+    # Format code with text
+    code = code.format(
+        command=json.dumps(command),
+        filesystem=json.dumps(filesystem)
+    )
+
+    # Create output file with open
+    with open(output, "wb") as output_file:
+        # Add shebang to file
+        output_file.write("#!/usr/bin/env python" + "\n")
+
+        # Open zip file and write entrypoint
+        with zipfile.ZipFIle(output_file, "a") as output_zipfile:
+            # Add entrypoint from code
+            output_zipfile.writestr("__main__.py", code)
