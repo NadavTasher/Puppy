@@ -1,6 +1,7 @@
 import time
 from puppy.utilities.context import contextmanager
 from puppy.thread.future import future
+from puppy.packer.packer import pyzip
 
 @contextmanager
 def thing():
@@ -16,7 +17,4 @@ def thing2(aaa):
 	raise Exception("Shhit ")
 	return aaa + "a"
 
-
-f = thing2("Hello ")
-time.sleep(10)
-print(f.result)
+pyzip("testz.py", ".", "python test.py")

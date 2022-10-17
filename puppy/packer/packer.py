@@ -1,5 +1,7 @@
 import os  # NOQA
 import zlib  # NOQA
+import base64  # NOQA
+import zipfile  # NOQA
 
 SEPARATOR = "/"
 
@@ -65,9 +67,10 @@ def resolve(path, packed):
         # Fetch the last node
         return packed[path]
 
+
 def pyzip(output, path, command):
     # Import pyzip entrypoint template
-    import pyzip
+    import entrypoint
 
     # Create packed path
     filesystem = pack(path, ignored=["__pycache__", ".pyc"])
@@ -78,14 +81,11 @@ def pyzip(output, path, command):
         code = packer.read()
 
     # Create entrypoint from pyzip
-    with open(pyzip.__file__, "rb") as template:
+    with open(entrypoint.__file__, "rb") as template:
         code += template.read()
 
     # Format code with text
-    code = code.format(
-        command=json.dumps(command),
-        filesystem=json.dumps(filesystem)
-    )
+    code = code.format(command=command, filesystem=filesystem)
 
     # Create output file with open
     with open(output, "wb") as output_file:
