@@ -78,17 +78,26 @@ class HTTPClient(object):
     def post(self, location="/", parameters={}, headers=[], body=None):
         return self.request("POST", location, None, parameters, headers, body)
 
+    def socket(self, address):
+        # Create socket for address
+        io = socket.socket()
+        io.connect(address)
+
+        # Return created socket
+        return io
+
     def interface(self, address):
         # Check if interface already exists
         if address not in self._interfaces:
-            # Create socket for address
-            io = socket.socket()
-            io.connect(address)
+            # Create HTTP interface
+            interface = HTTPInterface(self.socket(address))
 
-            # Create interface with socket
-            self._interfaces[address] = HTTPClientWrapper(
-                HTTPCompressionWrapper(HTTPConnectionStateWrapper(HTTPInterface(io)))
-            )
+            # Loop over wrappers and wrap
+            for w in [HTTPConnectionStateWrapper, HTTPCompressionWrapper]:
+                interface = w(interface)
+
+            # Create client interface
+            self._interfaces[address] = HTTPClientWrapper(interface)
 
         # Return interface for address
         return self._interfaces[address]

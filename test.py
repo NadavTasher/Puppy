@@ -2,6 +2,7 @@ from puppy.http import HTTPClient, HTTPServer, Request, Response, HTTPInterface,
 from puppy.thread import Looper, Process
 from puppy.test.mock import Mock
 from puppy.typing import wrapper
+from puppy.io.socket.limited import limited
 
 p = Process("tcpdump -i any 'tcp and port 8000'")
 
@@ -40,6 +41,9 @@ serv = HTTPServer(a, handle)
 client = HTTPClient()
 
 class printer(wrapper):
+	def socket(self, address):
+		return limited(self.target.socket(address), upstream=2000, downstream=8000, exceptions=False)
+
 	def request(self, *args, **kwargs):
 		print(self, args, kwargs)
 		return self.rebound.request(*args, **kwargs)

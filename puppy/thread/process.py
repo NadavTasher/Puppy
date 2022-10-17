@@ -31,7 +31,7 @@ class Process(Looper):
 
 		# Wrap with daemonization
 		return functools.reduce(
-			lambda a, b: a % json.dumps(b),
+			lambda command, parameter: command % json.dumps(parameter),
 			[
 				"sh -c %s",
 				"setsid sh -c %s > /dev/null 2>&1 & true",
