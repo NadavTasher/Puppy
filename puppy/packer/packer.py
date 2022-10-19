@@ -3,6 +3,9 @@ import zlib  # NOQA
 import base64  # NOQA
 import zipfile  # NOQA
 
+# Import puppy utilities
+from puppy.utilities.general import format
+
 SEPARATOR = "/"
 
 
@@ -85,7 +88,7 @@ def pyzip(output, path, command):
         code += template.read()
 
     # Format code with text
-    code = code.format(command=command, filesystem=filesystem)
+    code = format(code, command=command, filesystem=filesystem)
 
     # Create output file with open
     with open(output, "wb") as output_file:
@@ -93,6 +96,6 @@ def pyzip(output, path, command):
         output_file.write("#!/usr/bin/env python" + "\n")
 
         # Open zip file and write entrypoint
-        with zipfile.ZipFIle(output_file, "a") as output_zipfile:
+        with zipfile.ZipFile(output_file, "a") as output_zipfile:
             # Add entrypoint from code
             output_zipfile.writestr("__main__.py", code)
