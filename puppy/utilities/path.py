@@ -1,7 +1,6 @@
 import os  # NOQA
 import tempfile  # NOQA
 
-# Import contextmanager utility
 from puppy.utilities.context import contextmanager  # NOQA
 
 
@@ -16,8 +15,8 @@ def remove(path):
         os.remove(path)
     elif os.path.isdir(path):
         # Remove all paths in directory
-        for subpath in os.listdir(path):
-            remove(subpath)
+        for name in os.listdir(path):
+            remove(os.path.join(path, name))
 
         # Remove empty directory
         os.rmdir(path)

@@ -1,38 +1,62 @@
 import os
 
 
-def remove_init_files(path):
+def directories(path):
     for name in os.listdir(path):
         # Create subpath from name
         subpath = os.path.join(path, name)
 
-        # Check if path is file or directory
+        # Check if path is a directory
         if os.path.isdir(subpath):
-            remove_init_files(subpath)
-        else:
-            # Check if name is __init__.py
-            if name == "__init__.py" or name.endswith(".pyc"):
-                os.remove(subpath)
+            # Yield recursively
+            for item in directories(subpath):
+                yield item
+
+            # Yield directory
+            yield subpath
 
 
-def create_init_files(path):
-    for name in os.listdir(path):
-        # Create subpath from name
-        subpath = os.path.join(path, name)
+def remove(path):
+    # Make sure the path exists
+    if not os.path.exists(path):
+        return
 
-        # Check if path is file or directory
-        if os.path.isdir(subpath):
-            # Create init file
-            with open(os.path.join(subpath, "__init__.py"), "wb") as f:
-                pass
+    # Check if the path is a file
+    if os.path.isfile(path):
+        # Remove the path like a file
+        os.remove(path)
+    elif os.path.isdir(path):
+        # Remove all paths in directory
+        for name in os.listdir(path):
+            remove(os.path.join(path, name))
 
-            # Recurse to create more files
-            create_init_files(subpath)
+        # Remove empty directory
+        os.rmdir(path)
+
+
+def clean(path):
+    for subpath in directories(path):
+        # Skip other pycaches
+        if "__pycache__" in subpath:
+            remove(subpath)
+            continue
+
+        # Loop over files
+        for subname in os.listdir(subpath):
+            if subname == "__init__.py" or subname.endswith(".pyc"):
+                remove(os.path.join(subpath, subname))
+
+
+def make(path):
+    for subpath in directories(path):
+        # Create init file
+        with open(os.path.join(subpath, "__init__.py"), "wb") as stub:
+            pass
 
 
 def main(path):
-    remove_init_files(path)
-    create_init_files(path)
+    clean(path)
+    make(path)
 
 
 if __name__ == "__main__":
