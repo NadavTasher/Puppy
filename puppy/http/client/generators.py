@@ -3,7 +3,7 @@ import json
 import urllib
 
 # Import other classes
-from ..types import Header
+from puppy.http.types import Header
 
 
 def MimeType(content, mimetype):

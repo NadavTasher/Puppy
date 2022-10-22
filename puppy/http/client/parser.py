@@ -1,8 +1,5 @@
-# Import type classes
-from .types import URL
-
-# Import constants
-from .constants import PROTOCOLS
+from puppy.http.client.types import URL
+from puppy.http.client.constants import PROTOCOLS
 
 
 def parse(url):

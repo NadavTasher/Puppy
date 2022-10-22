@@ -2,57 +2,45 @@
 import socket
 import select
 
-# Import HTTP classes
-from ..interface import HTTPInterface
-from ..wrappers import HTTPCompressionWrapper, HTTPConnectionStateWrapper
-
-# Import server interface
-from .interface import HTTPServerWrapper
-
-# Import looper classes
-from ...thread import Server, Worker
+from puppy.thread.server import Server, Worker
+from puppy.http.server.interface import HTTPServerInterface
 
 
 class HTTPWorker(Worker):
-	def __init__(self, handler):
-		# Set internal parameters
-		self._handler = handler
-		self._interface = None
+    def __init__(self, handler):
+        # Set internal parameters
+        self._handler = handler
+        self._interface = None
 
-		# Initialize looper class
-		super(HTTPWorker, self).__init__()
+        # Initialize looper class
+        super(HTTPWorker, self).__init__()
 
-	def initialize(self):
-		# Initialize parent
-		super(HTTPWorker, self).initialize()
+    def initialize(self):
+        # Initialize parent
+        super(HTTPWorker, self).initialize()
 
-		# Create HTTP interface
-		self._interface = HTTPServerWrapper(
-			HTTPCompressionWrapper(
-				HTTPConnectionStateWrapper(
-					HTTPInterface(self._socket)
-				)
-			)
-		)
+        # Create HTTP interface
+        self._interface = HTTPServerInterface(self._socket)
 
-	def handle(self):
-		# Receive request, handle, response
-		self._interface.transmit(self._handler(self._interface.receive()))
+    def handle(self):
+        # Receive request, handle, response
+        self._interface.transmit(self._handler(self._interface.receive()))
 
-	# TODO: add this
+    # TODO: add this
 
-	# @property
-	# def running(self):
-	#     # Check if socket is closed
-	#     return super(Worker, self).running and not self._socket._closed
+    # @property
+    # def running(self):
+    #     # Check if socket is closed
+    #     return super(Worker, self).running and not self._socket._closed
+
 
 class HTTPServer(Server):
-	def __init__(self, address, handler):
-		# Set handler function
-		self._handler = handler
+    def __init__(self, address, handler):
+        # Set handler function
+        self._handler = handler
 
-		# Initialize looper class
-		super(HTTPServer, self).__init__(address)
+        # Initialize looper class
+        super(HTTPServer, self).__init__(address)
 
-	def child(self):
-		return HTTPWorker(self._handler).adopt(self)
+    def child(self):
+        return HTTPWorker(self._handler).adopt(self)

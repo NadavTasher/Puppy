@@ -7,7 +7,7 @@ import functools
 import subprocess
 
 # Import looper classes
-from .looper import Looper
+from puppy.thread.looper import Looper
 
 
 class Process(Looper):

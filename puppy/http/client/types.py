@@ -1,11 +1,9 @@
 # Import typing library
-from ...typing import *
+from puppy.typing.types import Literal
+from puppy.typing.namedtuple import NamedTuple
 
 # Import other types
-from ..types import Request, Response
-
-# Import constants
-from .constants import PROTOCOLS
+from puppy.http.types import Request, Response
 
 # Create browser classes
 URL = NamedTuple(

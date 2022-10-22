@@ -3,7 +3,7 @@ import socket
 import select
 
 # Import looper classes
-from .looper import Looper
+from puppy.thread.looper import Looper
 
 
 class Worker(Looper):

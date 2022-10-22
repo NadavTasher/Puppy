@@ -1,5 +1,5 @@
 # Import required types
-from .types import Header, Artifact
+from puppy.http.types import Header, Artifact
 
 # Operating constants
 CRLF = "\r\n"

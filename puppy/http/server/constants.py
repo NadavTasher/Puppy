@@ -1,5 +1,4 @@
-# Import protocol types
-from ..types import Response
+from puppy.http.types import Response
 
 # Create preset responses
 BAD_REQUEST = Response(400, "Bad Request", [], None)

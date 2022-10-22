@@ -1,5 +1,5 @@
 # Import validator functions
-from .validator import validate, validator
+from puppy.typing.validator import validate, validator
 
 
 @validator

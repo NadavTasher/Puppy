@@ -1,5 +1,5 @@
 # Import looper classes
-from .looper import Looper
+from puppy.thread.looper import Looper
 
 # Import threading classes
 from threading import Thread, Event, Lock

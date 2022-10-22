@@ -1,8 +1,8 @@
 # Import typing utilities
-from .validator import validate
+from puppy.typing.validator import validate
 
 # Import six utilities
-from ..six import arguments
+from puppy.six import arguments
 
 
 def types(*argtypes, **kwargtypes):

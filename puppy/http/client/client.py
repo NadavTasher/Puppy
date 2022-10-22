@@ -4,21 +4,10 @@ import socket
 import urllib
 import collections
 
-# Import HTTP classes
-from ..interface import HTTPInterface
-from ..wrappers import HTTPCompressionWrapper, HTTPConnectionStateWrapper
-
-# Import client interface
-from .interface import HTTPClientWrapper
-
-# Import HTTP types
-from ..types import Header, Request
-
-# Import local types
-from .types import History, Options
-
-# Import URL parser
-from .parser import parse
+from puppy.http.types import Header, Request
+from puppy.http.client.types import History, Options
+from puppy.http.client.parser import parse
+from puppy.http.client.interface import HTTPClientInterface
 
 
 class HTTPClient(object):
@@ -89,15 +78,8 @@ class HTTPClient(object):
     def interface(self, address):
         # Check if interface already exists
         if address not in self._interfaces:
-            # Create HTTP interface
-            interface = HTTPInterface(self.socket(address))
-
-            # Loop over wrappers and wrap
-            for w in [HTTPConnectionStateWrapper, HTTPCompressionWrapper]:
-                interface = w(interface)
-
             # Create client interface
-            self._interfaces[address] = HTTPClientWrapper(interface)
+            self._interfaces[address] = HTTPClientInterface(self.socket(address))
 
         # Return interface for address
         return self._interfaces[address]

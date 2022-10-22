@@ -7,7 +7,7 @@ class ContextManager(object):
         # Yield one result from the context manager
         for result in self.generator:
             return result
-        
+
         # Raise an exception if nothing was yielded
         raise Exception()
 
@@ -19,15 +19,16 @@ class ContextManager(object):
 
             # Return true, no exception is raised
             return True
-        
+
         # Return false, an exception has to be raised
         return False
+
 
 def contextmanager(function):
     # Create wrapper
     def wrapper(*args, **kwargs):
         # Create context manager from function
         return ContextManager(function(*args, **kwargs))
-    
+
     # Return wrapper
     return wrapper

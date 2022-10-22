@@ -1,5 +1,6 @@
 # Import typing library
-from ..typing import *
+from puppy.typing.types import List, Optional, Dict, Literal
+from puppy.typing.namedtuple import NamedTuple
 
 # Create interface classes
 Header = NamedTuple("Header", [("name", str), ("value", str)])

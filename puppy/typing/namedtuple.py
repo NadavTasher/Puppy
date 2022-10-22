@@ -2,12 +2,10 @@
 import collections
 
 # Import types for type checking
-from .types import Any, List, Tuple
-from .check import types
-from .validator import validate
+from puppy.typing.types import Any, List, Tuple
+from puppy.typing.validator import validate
 
 
-@types(str, List[Tuple[str, Any]])
 def NamedTuple(name, fields):
     # Create namedtuple classtype
     classtype = collections.namedtuple(name, [key for key, _ in fields])

@@ -2,20 +2,18 @@
 import gzip
 import StringIO
 
-# Import required classes
-from ..typing import wrapper
-
 # Import required types
-from .types import Header, Artifact
+from puppy.http.types import Header, Artifact
+from puppy.http.interface import HTTPInterface
 
 
-class HTTPCompressionWrapper(wrapper):
+class HTTPCompressionMixin(HTTPInterface):
     # Set internal variable
     _compress = False
 
     def receive(self):
         # Receive HTTP artifact
-        artifact = self.target.receive()
+        artifact = super(HTTPCompressionMixin, self).receive()
 
         # Set encoding variable
         encoding = None
@@ -62,16 +60,16 @@ class HTTPCompressionWrapper(wrapper):
             artifact = artifact._replace(headers=headers, content=content)
 
         # Transmit artifact
-        return self.target.transmit(artifact)
+        return super(HTTPCompressionMixin, self).transmit(artifact)
 
 
-class HTTPConnectionStateWrapper(wrapper):
+class HTTPConnectionStateMixin(HTTPInterface):
     # Set internal variable
     _linger = True
 
     def receive(self):
         # Receive an artifact
-        artifact = self.target.receive()
+        artifact = super(HTTPConnectionStateMixin, self).receive()
 
         # Check connection state header
         for key, value in artifact.headers:
@@ -98,7 +96,7 @@ class HTTPConnectionStateWrapper(wrapper):
         artifact = artifact._replace(headers=headers)
 
         # Transmit artifact as needed
-        self.target.transmit(artifact)
+        super(HTTPConnectionStateMixin, self).transmit(artifact)
 
         # Close socket if needed
         if not self._linger:

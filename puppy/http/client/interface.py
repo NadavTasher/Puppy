@@ -1,16 +1,11 @@
-# Import required classes
-from ...typing import wrapper
+from puppy.http.types import Header, Artifact, Request, Response
+from puppy.http.wrappers import HTTPCompressionMixin, HTTPConnectionStateMixin
+from puppy.http.interface import VERSION
 
-# Import required types
-from ..types import Header, Artifact, Request, Response
-
-# Import constants
-from ..interface import VERSION
-
-class HTTPClientWrapper(wrapper):
+class HTTPClientInterface(HTTPCompressionMixin, HTTPConnectionStateMixin):
     def receive(self):
         # Receive artifact from parent
-        artifact = self.target.receive()
+        artifact = super(HTTPClientInterface, self).receive()
 
         # Parse HTTP header as response header
         _, status, message = artifact.header.split(None, 2)
@@ -44,4 +39,4 @@ class HTTPClientWrapper(wrapper):
         artifact = Artifact(header, headers, request.content)
 
         # Transmit artifact
-        return self.target.transmit(artifact)
+        return super(HTTPClientInterface, self).transmit(artifact)
