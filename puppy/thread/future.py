@@ -75,6 +75,10 @@ class Future(Thread):
         # Return the result
         return self._result
 
+    def __invert__(self):
+        # Return the result value
+        return self.result
+
 
 def future(function):
     # Create wrapper for function
