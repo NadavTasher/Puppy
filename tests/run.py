@@ -14,6 +14,8 @@ import subprocess  # NOQA
 
 def run_test(name, python):
 	pass
+	with mktemp() as path:
+		# Create temporar
 
 def run(version="2"):
 	
