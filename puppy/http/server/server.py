@@ -1,19 +1,14 @@
 # Import python modules
-import socket
-import select
+import socket  # NOQA
+import select  # NOQA
 
-from puppy.thread.server import Server, Worker
-from puppy.http.server.interface import HTTPServerInterface
+from puppy.socket.server import Server, Worker  # NOQA
+from puppy.http.server.interface import HTTPServerInterface  # NOQA
 
 
 class HTTPWorker(Worker):
-    def __init__(self, handler):
-        # Set internal parameters
-        self._handler = handler
-        self._interface = None
-
-        # Initialize looper class
-        super(HTTPWorker, self).__init__()
+    # Private interface variable
+    _interface = None
 
     def initialize(self):
         # Initialize parent
@@ -24,7 +19,7 @@ class HTTPWorker(Worker):
 
     def handle(self):
         # Receive request, handle, response
-        self._interface.transmit(self._handler(self._interface.receive()))
+        self._interface.transmit(self._parent._handler(self._interface.receive()))
 
     # TODO: add this
 
@@ -40,7 +35,4 @@ class HTTPServer(Server):
         self._handler = handler
 
         # Initialize looper class
-        super(HTTPServer, self).__init__(address)
-
-    def child(self):
-        return HTTPWorker(self._handler).adopt(self)
+        super(HTTPServer, self).__init__(address, HTTPWorker)

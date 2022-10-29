@@ -1,5 +1,5 @@
 from puppy.http.types import Header, Artifact, Request, Response
-from puppy.http.wrappers import HTTPCompressionMixin, HTTPConnectionStateMixin
+from puppy.http.mixins import HTTPCompressionMixin, HTTPConnectionStateMixin
 from puppy.http.interface import VERSION
 
 class HTTPClientInterface(HTTPCompressionMixin, HTTPConnectionStateMixin):

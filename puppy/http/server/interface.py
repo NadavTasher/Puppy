@@ -1,6 +1,7 @@
-from puppy.http.types import Header, Artifact, Request, Response
-from puppy.http.wrappers import HTTPCompressionMixin, HTTPConnectionStateMixin
-from puppy.http.interface import VERSION
+from puppy.http.types import Header, Artifact, Request, Response  # NOQA
+from puppy.http.mixins import HTTPCompressionMixin, HTTPConnectionStateMixin  # NOQA
+from puppy.http.interface import VERSION  # NOQA
+
 
 class HTTPServerInterface(HTTPCompressionMixin, HTTPConnectionStateMixin):
     def receive(self):

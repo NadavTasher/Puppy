@@ -1,10 +1,9 @@
-# Import gzip and io
-import gzip
-import StringIO
+import io  # NOQA
+import gzip  # NOQA
 
 # Import required types
-from puppy.http.types import Header, Artifact
-from puppy.http.interface import HTTPInterface
+from puppy.http.types import Header, Artifact  # NOQA
+from puppy.http.interface import HTTPInterface  # NOQA
 
 
 class HTTPCompressionMixin(HTTPInterface):
@@ -50,10 +49,14 @@ class HTTPCompressionMixin(HTTPInterface):
             headers.append(Header("Accept-Encoding", "gzip, deflate"))
             headers.append(Header("Content-Encoding", "gzip"))
 
-            # Compress content using gzip
-            temporary = StringIO.StringIO()
+            # Create temporary bytes object
+            temporary = io.BytesIO()
+
+            # Compress using gzip
             with gzip.GzipFile(fileobj=temporary, mode="w") as compressor:
                 compressor.write(content)
+
+            # Update content with value
             content = temporary.getvalue()
 
             # Modify artifact with updated values

@@ -1,9 +1,7 @@
-# Import python modules
-import socket
-import select
+import socket  # NOQA
+import select  # NOQA
 
-# Import looper classes
-from puppy.thread.looper import Looper
+from puppy.thread.looper import Looper  # NOQA
 
 
 class Worker(Looper):
@@ -45,9 +43,10 @@ class Worker(Looper):
 
 
 class Server(Worker):
-    def __init__(self, address):
+    def __init__(self, address, handler):
         # Set internal parameters
         self._address = address
+        self._handler = handler
 
         # Initialize looper class
         super(Server, self).__init__()
@@ -60,7 +59,4 @@ class Server(Worker):
 
     def handle(self):
         # Create a new worker and start it
-        self.child().start()
-
-    def child(self):
-        return Worker().adopt(self)
+        self._handler().adopt(self).start()
