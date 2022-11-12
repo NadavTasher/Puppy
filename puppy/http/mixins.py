@@ -2,105 +2,153 @@ import io  # NOQA
 import gzip  # NOQA
 
 # Import required types
+from puppy.http.utilities import fetch_header  # NOQA
 from puppy.http.types import Header, Artifact  # NOQA
-from puppy.http.interface import HTTPInterface  # NOQA
+from puppy.http.interface import HTTPReceiver, HTTPTransmitter  # NOQA
+from puppy.socket.wrapper import SocketWrapper  # NOQA
 
 
-class HTTPCompressionMixin(HTTPInterface):
-    # Set internal variable
-    _compress = False
+class HTTPGzipMixIn(SocketWrapper):
+    # Internal supported variable
+    compression_support = False
 
-    def receive(self):
-        # Receive HTTP artifact
-        artifact = super(HTTPCompressionMixin, self).receive()
 
-        # Set encoding variable
-        encoding = None
+class HTTPGzipReceiverMixIn(HTTPGzipMixIn, HTTPReceiver):
+    def receive_artifact(self):
+        # Read artifact from parent
+        artifact = super(HTTPGzipReceiverMixIn, self).receive_artifact()
 
-        # Loop over headers and check them
-        for key, value in artifact.headers:
-            # Check if accept-encoding is set
-            if key.lower() == "accept-encoding":
-                # Check if gzip is supported
-                self._compress = "gzip" in value
+        # Update compression support from artifact
+        self._update_compression_support(artifact.headers)
 
-            # Check if content-encoding is set
-            if key.lower() == "content-encoding":
-                encoding = value
+        # Check if the gzip encoding was supplied
+        content_encoding = fetch_header(CONTENT_ENCODING, artifact.headers)
 
-        # Check if encoding was set
-        if not encoding:
+        # Make sure the encoding was supplied
+        if not content_encoding:
             return artifact
 
-        # Make sure encoding is gzip
-        assert encoding.lower() == "gzip"
+        # Make sure that the gzip encoding was provided
+        assert compare(content_encoding, GZIP)
 
         # Decompress content as gzip
         return artifact._replace(content=zlib.decompress(artifact.content, 40))
 
-    def transmit(self, artifact):
-        # Check if compression is enabled
-        if self._compress:
-            # Fetch artifact headers and content
-            headers = artifact.headers
-            content = artifact.content
+    def _update_compression_support(self, headers):
+        # Update compression support to false
+        self.compression_support = False
 
-            # Add encoding headers
-            headers.append(Header("Accept-Encoding", "gzip, deflate"))
-            headers.append(Header("Content-Encoding", "gzip"))
+        # Fetch the accepted encodings
+        accepted_encodings = fetch_header(ACCEPT_ENCODING, headers)
 
-            # Create temporary bytes object
+        # Check if the header exists
+        if not accepted_encodings:
+            return
+
+        # Split the header value and loop
+        for encoding in accepted_encodings.split(","):
+            if compare(encoding.strip(), GZIP):
+                # Compression is supported!
+                self.compression_support = True
+
+
+class HTTPGzipTransmitterMixIn(HTTPGzipMixIn, HTTPTransmitter):
+    def transmit_request(self, request):
+        # Add accept-encoding header
+        headers = request.headers
+        headers.append(Header(ACCEPT_ENCODING, GZIP))
+
+        # Modify the request
+        request = request._replace(headers=headers)
+
+        # Transmit modified request
+        return super(HTTPGzipTransmitterMixIn, self).transmit_request(request)
+
+    def transmit_response(self, response):
+        # Check if compression is supported
+        if self.compression_support and response.content:
+            # Add compression header
+            headers = response.headers
+            headers.append(Header(CONTENT_ENCODING, GZIP))
+
+            # Extract content from response
+            content = response.content
+
+            # Compress the content using gzip
             temporary = io.BytesIO()
-
-            # Compress using gzip
             with gzip.GzipFile(fileobj=temporary, mode="w") as compressor:
                 compressor.write(content)
 
             # Update content with value
             content = temporary.getvalue()
 
-            # Modify artifact with updated values
-            artifact = artifact._replace(headers=headers, content=content)
+            # Modify response with updated values
+            response = response._replace(headers=headers, content=content)
 
-        # Transmit artifact
-        return super(HTTPCompressionMixin, self).transmit(artifact)
+        # Transmit the response
+        return super(HTTPGzipTransmitterMixIn, self).transmit_response(response)
 
 
-class HTTPConnectionStateMixin(HTTPInterface):
-    # Set internal variable
-    _linger = True
+class HTTPConnectionStateMixIn(SocketWrapper):
+    # Internal close variable
+    should_close = False
 
-    def receive(self):
-        # Receive an artifact
-        artifact = super(HTTPConnectionStateMixin, self).receive()
 
-        # Check connection state header
-        for key, value in artifact.headers:
-            # Check if connection header was set
-            if key.lower() == "connection":
-                # Compare header to known close value
-                self._linger = value.lower() != "close"
-                break
-        else:
-            # Default - close connection
-            self._linger = False
+class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
+    def receive_artifact(self):
+        # Receive artifact from headers
+        artifact = super(HTTPConnectionStateReceiverMixIn, self).receive_artifact()
+
+        # Update connection state
+        self._update_connection_state(artifact.headers)
 
         # Return the artifact
         return artifact
 
-    def transmit(self, artifact):
-        # Fetch artifact headers
+    def receive_response(self):
+        # Receive a response
+        response = super(HTTPConnectionStateReceiverMixIn, self).receive_response()
+
+        # Try-finally
+        try:
+            return response
+        finally:
+            # Close the socket if needed
+            if self.should_close:
+                self.close()
+
+    def _update_connection_state(self, headers):
+        # Set default should close
+        self.should_close = True
+
+        # Fetch connection header
+        connection = fetch_header(CONNECTION, headers)
+
+        # If connection header not present, return
+        if not connection:
+            return
+
+        # Compare header to keepalive
+        self.should_close = compare(connection, KEEP_ALIVE)
+
+
+class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmitter):
+    def transmit_artifact(self, artifact):
+        # Add connection state header
         headers = artifact.headers
+        headers.append(Header(CONNECTION, CLOSE if self.should_close else KEEP_ALIVE))
 
-        # Add connection headers as needed
-        headers.append(Header("Connection", "keep-alive" if self._linger else "close"))
-
-        # Modify artifact headers
+        # Update artifact
         artifact = artifact._replace(headers=headers)
 
-        # Transmit artifact as needed
-        super(HTTPConnectionStateMixin, self).transmit(artifact)
+        # Write the artifact
+        return super(HTTPConnectionStateTransmitterMixIn, self).transmit_artifact(artifact)
 
-        # Close socket if needed
-        if not self._linger:
-            self.close()
+    def transmit_response(self, response):
+        # Try-finally
+        try:
+            return super(HTTPConnectionStateTransmitterMixIn, self).transmit_response(response)
+        finally:
+            # Close the socket if needed
+            if self.should_close:
+                self.close()

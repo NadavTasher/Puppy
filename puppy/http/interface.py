@@ -1,70 +1,19 @@
 # Import socket utilities
-from puppy.socket.wrapper import SocketWrapper
+from puppy.socket.io import SocketReader, SocketWriter
 
 # Import required types
 from puppy.http.types import Header, Artifact
+from puppy.http.constants import *
+from puppy.http.utilities import fetch_header
 
 # Operating constants
-CRLF = "\r\n"
 VERSION = 1.1
-SEPARATOR = ":"
-
-# Header constants
-CONNECTION = "Connection"
-CONTENT_TYPE = "Content-Type"
-CONTENT_LENGTH = "Content-Length"
-CONTENT_ENCODING = "Content-Encoding"
-TRANSFER_ENCODING = "Transfer-Encoding"
-
-# Value constants
-GZIP = "gzip"
-CHUNKED = "chunked"
-
-
-class SocketReader(SocketWrapper):
-    def receive_line(self):
-        # Create a reading buffer
-        buffer = bytearray()
-
-        # Loop until CRLF in buffer
-        while CRLF not in buffer:
-            buffer += self.recv(1)
-
-        # Return the buffer without the CRLF
-        return buffer[: -len(CRLF)]
-
-    def receive_lines(self):
-        # Read first line
-        line = self.receive_line()
-
-        # Loop while line is not empty
-        while line:
-            # Yield the received line
-            yield line
-
-            # Read the next line
-            line = self.receive_line()
-
-
-class SocketWriter(SocketWrapper):
-    def transmit_line(self, line=None):
-        # Write line if exists
-        if line:
-            self.send(line)
-
-        # Write line separator
-        self.send(CRLF)
-
-    def transmit_lines(self, lines=[]):
-        # Loop over lines and send them
-        for line in lines:
-            self.transmit_line(line)
 
 
 class HTTPReader(SocketReader):
     def receive_artifact(self):
         # Receive all artifact components
-        header = self.receive_line()
+        header = self.readline()
         headers = list(self.receive_headers())
         content = self.receive_content(headers)
 
@@ -72,13 +21,13 @@ class HTTPReader(SocketReader):
         return Artifact(header, headers, content)
 
     def receive_headers(self):
-        for line in self.receive_lines():
+        for line in self.readlines():
             # Validate header structure
-            if SEPARATOR not in line:
+            if ":" not in line:
                 continue
 
             # Split header line and create object
-            name, value = line.split(SEPARATOR, 1)
+            name, value = line.split(":", 1)
 
             # Yield new header
             yield Header(name.strip(), value.strip())
@@ -87,7 +36,7 @@ class HTTPReader(SocketReader):
         # Fetch all of the required headers
         content_type = fetch_header(CONTENT_TYPE, headers)
         content_length = fetch_header(CONTENT_LENGTH, headers)
-        transfer_encoding = fetch_header(TRANSFER_ENCODING, haeders)
+        transfer_encoding = fetch_header(TRANSFER_ENCODING, headers)
 
         # If a length is defined, fetch by length
         if content_length:
@@ -110,26 +59,21 @@ class HTTPReader(SocketReader):
 
     def receive_content_by_chunks(self):
         # Initialize buffer and length
-        buffer = str()
         length = None
+        buffer = bytearray()
 
-        # Read chunks until the length is 0
+        # Loop until length is 0
         while length != 0:
-            # Check if length is defined
-            if length:
-                # Read and yield
-                buffer += self._io.recv(length)
+            # Receive the next chunk's length
+            length = int(self.readline(), 16)
 
-                # Receive line separator
-                self._receive_line()
+            # Yield the line's length
+            buffer += self.recv(length)
 
-            # Receive next length
-            length = int(self._receive_line(), 16)
+            # Read separator line
+            self.readline()
 
-        # Read empty line
-        self._receive_line()
-
-        # Return buffer
+        # Return created buffer
         return buffer
 
     def receive_content_by_stream(self, limit=1024 * 1024):
@@ -150,134 +94,127 @@ class HTTPReader(SocketReader):
         return buffer
 
 
-class HTTPInterface(object):
-    def __init__(self, io):
-        # Set internal variables
-        self._io = io
+class HTTPWriter(SocketWriter):
+    def transmit_artifact(self, artifact):
+        # Transmit all parts
+        self.writeline(artifact.header)
+        self.transmit_headers(artifact.headers)
+        self.transmit_content(artifact.content)
 
-    def receive(self):
-        # Receive header line
-        header = self._receive_line()
+    def transmit_header(self, header):
+        # Write header in "key: value" format
+        self.writeline("%s: %s" % header)
 
-        # Receive all headers
-        headers = list(self._receive_headers())
-
-        # Receive content (with headers)
-        content = self._receive_content(headers)
-
-        # Return artifact
-        return Artifact(header, headers, content)
-
-    def _receive_line(self):
-        # Initialize buffer
-        buffer = str()
-
-        # Read until the CRLF exists
-        while CRLF not in buffer:
-            # Receive one byte into the buffer
-            buffer += self._io.recv(1)
-            # TODO: fix bug
-
-        # Return received buffer
-        return buffer[: -len(CRLF)]
-
-    def _receive_lines(self):
-        # Initialize line variable
-        line = None
-
-        # Yield lines until the line length is 0
-        while line != str():
-            # Yield the value if exists
-            if line:
-                yield line
-
-            # Read next line
-            line = self._receive_line()
-
-    def _receive_headers(self):
-        # Receive all headers
-        for line in self._receive_lines():
-            # Validate header line
-            if ":" not in line:
-                continue
-
-            # Split header into name and value
-            name, value = line.split(":", 1)
-
-            # Yield new header
-            yield Header(name.strip(), value.strip())
-
-    def _receive_content(self, headers):
-        # Set the content flag ahead of time
-        content = False
-
-        # Loop over all headers and set values
-        for key, value in headers:
-            # Change key to lower case
-            key = key.lower()
-
-            # Check if the content-length header is set
-            if key == "content-length":
-                return self._receive_content_by_length(value)
-
-            # Check if the transfer-encoding header is set
-            if key == "transfer-encoding":
-                return self._receive_content_by_chunks()
-
-            # Check if the content-type header is set
-            if key == "content-type":
-                content = True
-
-        # Check if should receive body
-        if content:
-            return self._receive_content_by_stream()
-
-        # Return none by default
-        return None
-
-    def transmit(self, artifact):
-        # Transmit HTTP header
-        self._transmit_line(artifact.header)
-
-        # Transmit all headers
-        self._transmit_headers(artifact.headers)
-
-        # Transmit content
-        self._transmit_content(artifact.content)
-
-    def _transmit_line(self, line=None):
-        # Write given line if defined
-        if line:
-            self._io.send(line)
-
-        # Write HTTP line separator
-        self._io.send(CRLF)
-
-    def _transmit_header(self, header):
-        # Write header with name: value format
-        self._transmit_line("%s: %s" % (header.name, header.value))
-
-    def _transmit_headers(self, headers):
-        # Loop over each header and transmit it
+    def transmit_headers(self, headers):
+        # Loop over headers and transmit them
         for header in headers:
-            self._transmit_header(header)
+            self.transmit_header(header)
 
-    def _transmit_content(self, content):
-        # Check if content is even defined
+    def transmit_content(self, content):
+        # If content is defined, write a content-length header
         if content:
-            # Transmit content-length header
-            self._transmit_header(Header("Content-Length", str(len(content))))
+            self.transmit_header(Header(CONTENT_LENGTH, str(len(content))))
 
-            # Transmit CRLF separator
-            self._transmit_line()
+        # Write HTTP separator (empty line)
+        self.writeline()
 
-            # Transmit complete contents
-            self._io.send(content)
+        # If content is defined, send it
+        if content:
+            # Send the content as is
+            self.send(content)
         else:
-            # Transmit two CRLF separators
-            self._transmit_line()
-            self._transmit_line()
+            # Send empty content
+            self.writeline()
 
-    def close(self):
-        # Close socket!
-        self._io.close()
+
+class HTTPReceiver(HTTPReader):
+    def receive_request(self):
+        # Receive artifact from parent
+        artifact = self.receive_artifact()
+
+        # Parse HTTP header as request header
+        method, location, _ = artifact.header.split(None, 2)
+
+        # Find host header value
+        host = fetch_header(HOST, artifact.headers)
+
+        # Initialize parameters (to be filled from query)
+        parameters = dict()
+
+        # Split location to path and query string
+        if "?" in location:
+            path, query = location.split("?", 1)
+
+            # Split query by amp and parse parameters
+            for parameter in query.split("&"):
+                # Check if parameter contains "="
+                if "=" not in parameter:
+                    continue
+
+                # Split parameter
+                name, value = parameter.split("=", 1)
+
+                # Parse as encoded parameters
+                name = urllib.unquote(name.strip())
+                value = urllib.unquote(value.strip())
+
+                # Add to dictionary
+                parameters[name] = value
+
+            # Return created request
+            return Request(
+                host, method, path, parameters, artifact.headers, artifact.content
+            )
+
+        # Return created request
+        return Request(host, method, location, None, artifact.headers, artifact.content)
+
+    def receive_response(self):
+        # Receive artifact from parent
+        artifact = self.receive_artifact()
+
+        # Parse HTTP header as response header
+        _, status, message = artifact.header.split(None, 2)
+
+        # Convert status to int
+        status = int(status)
+
+        # Return created response
+        return Response(status, message, artifact.headers, artifact.content)
+
+
+class HTTPTransmitter(HTTPWriter):
+    def transmit_request(self, request):
+        # Create location string
+        location = request.location
+
+        # Check if request parameters have to be added
+        if request.parameters:
+            location += "?" + "&".join(
+                [
+                    "%s=%s" % (urllib.quote(name), urllib.quote(value))
+                    for name, value in request.parameters.items()
+                ]
+            )
+
+        # Create HTTP header
+        header = "%s %s HTTP/%.1f" % (request.method, location, VERSION)
+
+        # Create header list
+        headers = request.headers
+
+        # Insert host header if needed
+        if request.host:
+            headers.insert(0, Header("Host", request.host))
+
+        # Transmit artifact
+        return self.transmit_artifact(Artifact(header, headers, request.content))
+
+    def transmit_response(self, response):
+        # Create HTTP header
+        header = "HTTP/%.1f %d %s" % (VERSION, response.status, response.message)
+
+        # Transmit artifact
+        return self.transmit_artifact(
+            Artifact(header, response.headers, response.content)
+        )

@@ -5,41 +5,39 @@ import urllib
 import collections
 
 from puppy.http.types import Header, Request
+from puppy.http.interface import *
 from puppy.http.client.types import History, Options
 from puppy.http.client.parser import parse
-from puppy.http.client.interface import HTTPClientInterface
+from puppy.http.client.constants import *
+
+
+class HTTPClientInterface(
+    HTTPReceiver,
+    HTTPTransmitter,
+    HTTPGzipReceiverMixIn,
+    HTTPGzipTransmitterMixIn,
+    HTTPConnectionStateReceiverMixIn,
+    HTTPConnectionStateTransmitterMixIn,
+):
+    pass
 
 
 class HTTPClient(object):
-    def __init__(self, options=Options(False, False)):
+    def __init__(self, implementation=HTTPClientInterface):
         # Client variables
-        self._options = options
+        self.implementation = implementation
 
         # State variables
-        self._cookies = dict()
-        self._headers = list()
-        self._history = list()
-        self._interfaces = dict()
-
-    @property
-    def _cookie_header(self):
-        return Header(
-            "Cookie",
-            "; ".join(
-                [
-                    # Format as name=value
-                    "%s=%s" % (urllib.quote(name), urllib.quote(value))
-                    # For each cookie in the jar
-                    for name, value in self._cookies.items()
-                ]
-            ),
-        )
+        self.cookies = dict()
+        self.headers = list()
+        self.history = list()
+        self.interfaces = dict()
 
     def _update_cookies(self, headers):
         # Add cookies to cookie jar
-        for name, value in headers:
+        for header in headers:
             # Check if the header name is set-cookie
-            if name.lower() != "set-cookie":
+            if not compare(header.name, SET_COOKIE):
                 continue
 
             # Check if semicolon exists
@@ -59,7 +57,7 @@ class HTTPClient(object):
             name, value = urllib.unquote(name), urllib.unquote(value)
 
             # Update cookie jar
-            self._cookies[name] = value
+            self.cookies[name] = value
 
     def get(self, url, params={}, **kwargs):
         return self.request("GET", url, params, **kwargs)
@@ -77,12 +75,12 @@ class HTTPClient(object):
 
     def interface(self, address):
         # Check if interface already exists
-        if address not in self._interfaces:
+        if address not in self.interfaces:
             # Create client interface
-            self._interfaces[address] = HTTPClientInterface(self.socket(address))
+            self.interfaces[address] = self.implementation(self.socket(address))
 
         # Return interface for address
-        return self._interfaces[address]
+        return self.interfaces[address]
 
     def request(self, method, url, parameters={}, headers=[], body=None):
         # Parse URL using parser
@@ -96,26 +94,38 @@ class HTTPClient(object):
 
         # Create header list
         headers = list(headers)
-        headers += self._headers
+        headers += self.headers
 
         # Append cookie header
-        if self._cookies:
-            headers.append(self._cookie_header)
+        if self.cookies:
+            headers.append(
+                Header(
+                    COOKIE,
+                    "; ".join(
+                        [
+                            # Format as name=value
+                            "%s=%s" % (urllib.quote(name), urllib.quote(value))
+                            # For each cookie in the jar
+                            for name, value in self.cookies.items()
+                        ]
+                    ),
+                )
+            )
 
         # Create request object
         request = Request(url.host, method, url.path, parameters, headers, body)
 
         # Send request using client
-        interface.transmit(request)
+        interface.transmit_request(request)
 
         # Receive response using client
-        response = interface.receive()
+        response = interface.receive_response()
 
         # Update cookie jar
         self._update_cookies(response.headers)
 
         # Add new history item
-        self._history.append(History(request, response))
+        self.history.append(History(request, response))
 
         # Return response
         return response
