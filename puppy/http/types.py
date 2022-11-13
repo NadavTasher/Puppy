@@ -34,15 +34,14 @@ Response = NamedTuple(
 )
 
 class Headers(object):
-    def __init__(self, headers=None):
+    def __init__(self, headers=[]):
         # Initialize order list
         self.keys = list()
         self.values = dict()
 
         # Add all headers
-        if headers:
-            for name, value in headers:
-                self.add_header(name, value)
+        for name, value in headers:
+            self.add_header(name, value)
 
     def has_header(self, name):
         # Check if name exists
@@ -69,14 +68,16 @@ class Headers(object):
 
     def set_header(self, name, value):
         # Make sure the name exists
-        self.new_header(name)
+        if not self.has_header(name):
+            self.new_header(name)
 
         # Update values dictionary
         self.values[name.lower()] = (name, [value])
 
     def get_header(self, name):
         # Make sure the name exists
-        self.new_header(name)
+        if not self.has_header(name):
+            return list()
 
         # Fetch the values
         _, values = self.values[name.lower()]
@@ -105,9 +106,9 @@ class Headers(object):
 
     def __iter__(self):
         # Loop over all keys
-        for lower in self.keys:
+        for key in self.keys:
             # Fetch real name and values
-            name, values = self.values[lower]
+            name, values = self.values[key]
 
             # Loop over values and yield
             for value in values:
