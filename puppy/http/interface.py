@@ -21,6 +21,10 @@ class HTTPReader(SocketReader):
         return Artifact(header, headers, content)
 
     def receive_headers(self):
+        # Create headers object
+        headers = Headers()
+
+        # Loop over all lines
         for line in self.readlines():
             # Validate header structure
             if ":" not in line:
@@ -30,13 +34,15 @@ class HTTPReader(SocketReader):
             name, value = line.split(":", 1)
 
             # Yield new header
-            yield Header(name.strip(), value.strip())
+            headers.add_header(name.strip(), value.strip())
+
+        # Return the headers object
+        return headers
 
     def receive_content(self, headers):
         # Fetch all of the required headers
-        content_type = fetch_header(CONTENT_TYPE, headers)
-        content_length = fetch_header(CONTENT_LENGTH, headers)
-        transfer_encoding = fetch_header(TRANSFER_ENCODING, headers)
+        (content_length,) = headers.get_header(CONTENT_LENGTH)
+        (transfer_encoding,) = headers.get_header(TRANSFER_ENCODING)
 
         # If a length is defined, fetch by length
         if content_length:
@@ -45,13 +51,13 @@ class HTTPReader(SocketReader):
         # If encoding is defined, fetch by chunks
         if transfer_encoding:
             # Make sure the encoding is supported
-            assert compare(transfer_encoding, CHUNKED)
+            assert transfer_encoding.lower() == CHUNKED
 
             # Receive by chunks
             return self.receive_content_by_chunks()
 
         # If a content type is defined, receive by stream
-        if content_type:
+        if headers.has_header(CONTENT_TYPE):
             return self.receive_content_by_stream()
 
     def receive_content_by_length(self, length):
