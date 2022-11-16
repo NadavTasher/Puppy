@@ -30,12 +30,16 @@ class Router(object):
         return wrapper
 
     def __call__(self, request):
+        # Convert method and location
+        method = request.method.decode()
+        location = request.location.decode()
+
         # Check if has a valid route exists
         routes = [
             # Method specific route
-            (request.method, request.location),
+            (method, location),
             # Method wildcard route
-            (None, request.location),
+            (None, location),
         ]
 
         # Check if any valid route exists

@@ -43,10 +43,10 @@ class Worker(Looper):
 
 
 class Server(Worker):
-    def __init__(self, address, handler):
+    def __init__(self, address, implementation):
         # Set internal parameters
         self._address = address
-        self._handler = handler
+        self._implementation = implementation
 
         # Initialize looper class
         super(Server, self).__init__()
@@ -59,4 +59,4 @@ class Server(Worker):
 
     def handle(self):
         # Create a new worker and start it
-        self._handler().adopt(self).start()
+        self._implementation().adopt(self).start()
