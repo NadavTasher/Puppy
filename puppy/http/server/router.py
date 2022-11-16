@@ -1,3 +1,6 @@
+import os  # NOQA
+
+from puppy.http.types import Response  # NOQA
 from puppy.http.server.constants import NOT_FOUND  # NOQA
 
 
@@ -28,6 +31,20 @@ class Router(object):
 
         # Return wrapper
         return wrapper
+
+    def files(self, path, name="/"):
+        # Check if the path is a file
+        if os.path.isfile(path):
+            # Create a lambda to the path
+            @self.get(name)
+            def handler(request):
+                with open(path, "rb") as file:
+                    return Response(200, "OK", [], file.read())
+
+        else:
+            # Loop over paths and load them as routes
+            for subname in os.listdir(path):
+                self.files(os.path.join(path, subname), os.path.join(name, subname))
 
     def __call__(self, request):
         # Convert method and location
