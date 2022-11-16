@@ -3,8 +3,7 @@ import zlib  # NOQA
 import base64  # NOQA
 import zipfile  # NOQA
 
-# Import puppy utilities
-from puppy.utilities.general import format
+from puppy.string.utilities import format  # NOQA
 
 SEPARATOR = "/"
 

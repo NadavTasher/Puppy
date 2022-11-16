@@ -1,5 +1,4 @@
-# Import validator functions
-from puppy.typing.validator import validate, validator
+from puppy.typing.validator import validate, validator  # NOQA
 
 
 @validator
