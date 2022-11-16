@@ -2,8 +2,8 @@
 import socket  # NOQA
 import select  # NOQA
 
+from puppy.http.http import HTTP  # NOQA
 from puppy.socket.server import Server, Worker  # NOQA
-from puppy.http.server.interface import HTTPServerInterface  # NOQA
 
 
 class HTTPWorker(Worker):
@@ -15,18 +15,18 @@ class HTTPWorker(Worker):
         super(HTTPWorker, self).initialize()
 
         # Create HTTP interface
-        self._interface = HTTPServerInterface(self._socket)
+        self._interface = HTTP(self._socket)
 
     def handle(self):
         # Receive request, handle, response
-        self._interface.transmit(self._parent._handler(self._interface.receive()))
+        self._interface.transmit_response(
+            self._parent._handler(self._interface.receive_request())
+        )
 
-    # TODO: add this
-
-    # @property
-    # def running(self):
-    #     # Check if socket is closed
-    #     return super(Worker, self).running and not self._socket._closed
+    @property
+    def running(self):
+        # Check if socket is closed
+        return super(HTTPWorker, self).running and not self._interface.closed
 
 
 class HTTPServer(Server):

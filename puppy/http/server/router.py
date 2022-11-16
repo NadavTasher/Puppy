@@ -5,23 +5,23 @@ class Router(object):
     # Private routes dictionary
     _routes = dict()
 
-    def get(self, path):
-        return self.attach(path, "GET")
+    def get(self, location):
+        return self.attach(location, "GET")
 
-    def post(self, path):
-        return self.attach(path, "POST")
+    def post(self, location):
+        return self.attach(location, "POST")
 
-    def attach(self, path, *methods):
+    def attach(self, location, *methods):
         # Create attachment function
         def wrapper(function):
             # Attach to all required methods
             if methods:
                 for method in methods:
                     # Attach function to routes
-                    self._routes[(method, path)] = function
+                    self._routes[(method, location)] = function
             else:
                 # Attach to a wildcard method
-                self._routes[(None, path)] = function
+                self._routes[(None, location)] = function
 
             # Return the function with no change
             return function
@@ -33,9 +33,9 @@ class Router(object):
         # Check if has a valid route exists
         routes = [
             # Method specific route
-            (request.method, request.path),
+            (request.method, request.location),
             # Method wildcard route
-            (None, request.path),
+            (None, request.location),
         ]
 
         # Check if any valid route exists

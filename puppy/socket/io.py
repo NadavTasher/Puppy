@@ -11,7 +11,7 @@ class SocketReader(SocketWrapper):
 
         # Loop until CRLF in buffer
         while separator not in buffer:
-            buffer += self.recv(1)
+            buffer += self.recvexact(1)
 
         # Return the buffer without the CRLF
         return buffer[: -len(separator)]

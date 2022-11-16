@@ -22,16 +22,3 @@ def format(string, *args, **kwargs):
 
     # Return formatted haystack
     return haystack
-
-
-def compare(left, right):
-    # Make sure the strings are not the same
-    if left == right:
-        return True
-
-    # Make sure both sides are defined
-    if left is None or right is None:
-        return False
-
-    # Compare both sides with lower
-    return left.lower() == right.lower()

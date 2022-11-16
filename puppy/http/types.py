@@ -1,115 +1,161 @@
-# Import collections
-import collections
+import collections  # NOQA
 
-# Import typing library
-from puppy.typing.types import List, Optional, Dict, Literal
-from puppy.typing.namedtuple import NamedTuple
+from puppy.http.constants import VERSION  # NOQA
 
-# Create interface classes
-Header = NamedTuple("Header", [("name", str), ("value", str)])
-Artifact = NamedTuple(
-    "Artifact", [("header", str), ("headers", List[Header]), ("content", Optional[str])]
-)
 
-# Create request & response classes
-Request = NamedTuple(
-    "Request",
-    [
-        ("host", str),
-        ("method", Literal["GET", "POST"]),
-        ("location", str),
-        ("parameters", Optional[Dict[str, str]]),
-        ("headers", Optional[Headers]),
-        ("content", Optional[str]),
-    ],
-)
-Response = NamedTuple(
-    "Response",
-    [
-        ("status", int),
-        ("message", str),
-        ("headers", List[Header]),
-        ("content", Optional[str]),
-    ],
-)
+class Artifact(object):
+    def __init__(self, headers=None, content=None):
+        # Set the internal contents
+        self.headers = headers or Headers()
+        self.content = content
+
+    @property
+    def header(self):
+        pass
+
+    def __repr__(self):
+        return "%s(%r, %r)" % (self.__class__.__name__, self.headers, self.content)
+
+
+class Received(Artifact):
+    def __init__(self, line, headers=None, content=None):
+        # Set the internal line
+        self.line = line
+
+        # Initialize the artifact
+        super(Received, self).__init__(headers, content)
+
+    @property
+    def header(self):
+        return self.line
+
+    def __repr__(self):
+        return "%s(%r, %r, %r)" % (
+            self.__class__.__name__,
+            self.line,
+            self.headers,
+            self.content,
+        )
+
+
+class Request(Artifact):
+    def __init__(self, method, location, headers=None, content=None):
+        # Set internal variables
+        self.method = method
+        self.location = location
+
+        # Initialize the artifact
+        super(Request, self).__init__(headers, content)
+
+    @property
+    def header(self):
+        return "%s %s HTTP/%.1f" % (self.method.upper(), self.location, VERSION)
+
+    def __repr__(self):
+        return "%s(%r, %r, %r, %r)" % (
+            self.__class__.__name__,
+            self.method,
+            self.location,
+            self.headers,
+            self.content,
+        )
+
+
+class Response(Artifact):
+    def __init__(self, status, message, headers=None, content=None):
+        # Set internal variables
+        self.status = status
+        self.message = message
+
+        # Initialize the artifact
+        super(Response, self).__init__(headers, content)
+
+    @property
+    def header(self):
+        return "HTTP/%.1f %d %s" % (VERSION, self.status, self.message)
+
+    def __repr__(self):
+        return "%s(%r, %r, %r, %r)" % (
+            self.__class__.__name__,
+            self.status,
+            self.message,
+            self.headers,
+            self.content,
+        )
+
 
 class Headers(object):
     def __init__(self, headers=[]):
         # Initialize order list
-        self.keys = list()
-        self.values = dict()
+        self.store = collections.OrderedDict()
 
         # Add all headers
         for name, value in headers:
             self.add_header(name, value)
 
-    def has_header(self, name):
-        # Check if name exists
-        return name.lower() in self.keys
+    def has(self, name):
+        return name.decode().lower() in self.store.keys()
 
-    def new_header(self, name):
+    def new(self, name):
         # Make sure name does not exist
-        if self.has_header(name):
+        if self.has(name):
             return
 
-        # Create an empty instance
-        self.keys.append(name.lower())
-        self.values[name.lower()] = (name, list())
+        # Create new entry
+        self.store[name.decode().lower()] = (name, list())
 
-    def add_header(self, name, value):
-        # Get the values
-        values = self.get_header(name)
+    def pop(self, name):
+        try:
+            # Fetch all values
+            return self.fetch(name)
+        finally:
+            # Remove the value
+            self.remove(name)
 
-        # Add value to list
-        values.append(value)
-
-        # Update values dictionary
-        self.values[name.lower()] = (name, values)
-
-    def set_header(self, name, value):
-        # Make sure the name exists
-        if not self.has_header(name):
-            self.new_header(name)
-
-        # Update values dictionary
-        self.values[name.lower()] = (name, [value])
-
-    def get_header(self, name):
-        # Make sure the name exists
-        if not self.has_header(name):
+    def fetch(self, name):
+        # Make sure header exists
+        if not self.has(name):
             return list()
 
-        # Fetch the values
-        _, values = self.values[name.lower()]
+        # Fetch values from store
+        _, values = self.store[name.decode().lower()]
 
         # Return the values
         return values
 
-    def pop_header(self, name):
-        # Fetch the values
-        values = self.get_header(name)
+    def append(self, name, value):
+        # Create new entry if does not exist
+        if not self.has(name):
+            self.new(name)
 
-        # Remove the header
-        self.remove_header(name)
+        # Fetch values and append to them
+        values = self.fetch(name)
+        values.append(value)
 
-        # Return the values
-        return values
+        # Update store values
+        self.store[name.decode().lower()] = (name, values)
 
-    def remove_header(self, name):
-        # Make sure the name exists
-        if not self.has_header(name):
+    def update(self, name, value):
+        # Create new entry if does not exist
+        if not self.has(name):
+            self.new(name)
+
+        # Update store values
+        self.store[name.decode().lower()] = (name, [value])
+
+    def remove(self, name):
+        # Make sure the header exists
+        if not self.has(name):
             return
 
         # Remove key from list and value from dict
-        self.keys.remove(name.lower())
-        del self.values[name.lower()]
+        self.store.pop(name.decode().lower())
 
     def __iter__(self):
-        # Loop over all keys
-        for key in self.keys:
-            # Fetch real name and values
-            name, values = self.values[key]
-
-            # Loop over values and yield
+        # Loop over values and yield
+        for name, values in self.store.values():
             for value in values:
-                yield Header(name, value)
+                yield name, value
+
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__.__name__, list(self))

@@ -16,5 +16,4 @@ URL = NamedTuple(
     ],
 )
 Cookie = NamedTuple("Cookie", [("name", str), ("value", str)])
-Options = NamedTuple("Options", [("linger", bool), ("compress", bool)])
 History = NamedTuple("History", [("request", Request), ("response", Response)])

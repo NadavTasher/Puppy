@@ -4,26 +4,15 @@ import socket
 import urllib
 import collections
 
-from puppy.http.types import Header, Request
-from puppy.http.interface import *
-from puppy.http.client.types import History, Options
+from puppy.http.http import HTTP
+from puppy.http.types import Request, Headers
+from puppy.http.client.types import History
 from puppy.http.client.parser import parse
 from puppy.http.client.constants import *
 
 
-class HTTPClientInterface(
-    HTTPReceiver,
-    HTTPTransmitter,
-    HTTPGzipReceiverMixIn,
-    HTTPGzipTransmitterMixIn,
-    HTTPConnectionStateReceiverMixIn,
-    HTTPConnectionStateTransmitterMixIn,
-):
-    pass
-
-
 class HTTPClient(object):
-    def __init__(self, implementation=HTTPClientInterface):
+    def __init__(self, implementation=HTTP):
         # Client variables
         self.implementation = implementation
 
@@ -33,13 +22,27 @@ class HTTPClient(object):
         self.history = list()
         self.interfaces = dict()
 
-    def _update_cookies(self, headers):
-        # Add cookies to cookie jar
-        for header in headers:
-            # Check if the header name is set-cookie
-            if not compare(header.name, SET_COOKIE):
-                continue
+    def _update_request(self, request):
+        # Set cookies header
+        if self.cookies:
+            request.headers.update(
+                COOKIE,
+                "; ".join(
+                    [
+                        # Format as name=value
+                        "%s=%s" % (urllib.quote(name), urllib.quote(value))
+                        # For each cookie in the jar
+                        for name, value in self.cookies.items()
+                    ]
+                ),
+            )
 
+        # Return the request
+        return request
+
+    def _update_response(self, response):
+        # Update cookie jar with response headers
+        for header in response.headers.pop(SET_COOKIE):
             # Check if semicolon exists
             if ";" in value:
                 # Split by semicolon
@@ -59,25 +62,24 @@ class HTTPClient(object):
             # Update cookie jar
             self.cookies[name] = value
 
+        # Return the response
+        return response
+
     def get(self, url, params={}, **kwargs):
         return self.request("GET", url, params, **kwargs)
 
     def post(self, location="/", parameters={}, headers=[], body=None):
         return self.request("POST", location, None, parameters, headers, body)
 
-    def socket(self, address):
-        # Create socket for address
-        io = socket.socket()
-        io.connect(address)
-
-        # Return created socket
-        return io
-
     def interface(self, address):
         # Check if interface already exists
         if address not in self.interfaces:
+            # Connect to socket
+            connection = socket.socket()
+            connection.connect(address)
+
             # Create client interface
-            self.interfaces[address] = self.implementation(self.socket(address))
+            self.interfaces[address] = self.implementation(connection)
 
         # Return interface for address
         return self.interfaces[address]
@@ -89,31 +91,15 @@ class HTTPClient(object):
         # Find IP address of host
         address = socket.gethostbyname(url.host), url.port
 
-        # Get interface for request by address
+        # Get interface for request by address and update host
         interface = self.interface(address)
-
-        # Create header list
-        headers = list(headers)
-        headers += self.headers
-
-        # Append cookie header
-        if self.cookies:
-            headers.append(
-                Header(
-                    COOKIE,
-                    "; ".join(
-                        [
-                            # Format as name=value
-                            "%s=%s" % (urllib.quote(name), urllib.quote(value))
-                            # For each cookie in the jar
-                            for name, value in self.cookies.items()
-                        ]
-                    ),
-                )
-            )
+        interface.host = url.host
 
         # Create request object
-        request = Request(url.host, method, url.path, parameters, headers, body)
+        request = Request(method, url.path, Headers(headers), body)
+
+        # Update the request
+        request = self._update_request(request)
 
         # Send request using client
         interface.transmit_request(request)
@@ -121,8 +107,8 @@ class HTTPClient(object):
         # Receive response using client
         response = interface.receive_response()
 
-        # Update cookie jar
-        self._update_cookies(response.headers)
+        # Update the response
+        response = self._update_response(response)
 
         # Add new history item
         self.history.append(History(request, response))

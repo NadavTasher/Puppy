@@ -1,10 +1,20 @@
 import io  # NOQA
 import gzip  # NOQA
+import zlib  # NOQA
 
 # Import required types
-from puppy.http.utilities import fetch_header  # NOQA
-from puppy.http.types import Header, Artifact  # NOQA
-from puppy.http.interface import HTTPReceiver, HTTPTransmitter  # NOQA
+from puppy.http.protocol import HTTPReceiver, HTTPTransmitter  # NOQA
+from puppy.http.constants import (
+    HOST,
+    GZIP,
+    CLOSE,
+    CONNECTION,
+    KEEP_ALIVE,
+    ACCEPT_ENCODING,
+    CONTENT_ENCODING,
+)  # NOQA
+
+# Import socket wrapper
 from puppy.socket.wrapper import SocketWrapper  # NOQA
 
 
@@ -21,45 +31,42 @@ class HTTPGzipReceiverMixIn(HTTPGzipMixIn, HTTPReceiver):
         # Update compression support from artifact
         self._update_compression_support(artifact.headers)
 
-        # Check if the gzip encoding was supplied
-        content_encoding = fetch_header(CONTENT_ENCODING, artifact.headers)
-
-        # Make sure the encoding was supplied
-        if not content_encoding:
+        # Check if a content encoding was supplied
+        if not artifact.headers.has(CONTENT_ENCODING):
             return artifact
 
+        # Check the content encoding
+        (content_encoding,) = artifact.headers.pop(CONTENT_ENCODING)
+
         # Make sure that the gzip encoding was provided
-        assert compare(content_encoding, GZIP)
+        assert content_encoding.decode().lower() == GZIP
 
         # Decompress content as gzip
-        return artifact._replace(content=zlib.decompress(artifact.content, 40))
+        artifact.content = zlib.decompress(bytes(artifact.content), 40)
+
+        # Return the artifact
+        return artifact
 
     def _update_compression_support(self, headers):
         # Update compression support to false
         self.compression_support = False
 
         # Fetch the accepted encodings
-        accepted_encodings = fetch_header(ACCEPT_ENCODING, headers)
-
-        # Check if the header exists
-        if not accepted_encodings:
+        if not headers.has(ACCEPT_ENCODING):
             return
 
         # Split the header value and loop
-        for encoding in accepted_encodings.split(","):
-            if compare(encoding.strip(), GZIP):
-                # Compression is supported!
-                self.compression_support = True
+        for accepted_encodings in headers.fetch(ACCEPT_ENCODING):
+            for encoding in accepted_encodings.split(","):
+                if encoding.strip().lower() == GZIP:
+                    # Compression is supported!
+                    self.compression_support = True
 
 
 class HTTPGzipTransmitterMixIn(HTTPGzipMixIn, HTTPTransmitter):
     def transmit_request(self, request):
         # Add accept-encoding header
-        headers = request.headers
-        headers.append(Header(ACCEPT_ENCODING, GZIP))
-
-        # Modify the request
-        request = request._replace(headers=headers)
+        request.headers.update(ACCEPT_ENCODING, GZIP)
 
         # Transmit modified request
         return super(HTTPGzipTransmitterMixIn, self).transmit_request(request)
@@ -68,22 +75,15 @@ class HTTPGzipTransmitterMixIn(HTTPGzipMixIn, HTTPTransmitter):
         # Check if compression is supported
         if self.compression_support and response.content:
             # Add compression header
-            headers = response.headers
-            headers.append(Header(CONTENT_ENCODING, GZIP))
-
-            # Extract content from response
-            content = response.content
+            response.headers.append(CONTENT_ENCODING, GZIP)
 
             # Compress the content using gzip
             temporary = io.BytesIO()
             with gzip.GzipFile(fileobj=temporary, mode="w") as compressor:
-                compressor.write(content)
+                compressor.write(bytes(response.content))
 
             # Update content with value
-            content = temporary.getvalue()
-
-            # Modify response with updated values
-            response = response._replace(headers=headers, content=content)
+            response.content = temporary.getvalue()
 
         # Transmit the response
         return super(HTTPGzipTransmitterMixIn, self).transmit_response(response)
@@ -106,12 +106,9 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
         return artifact
 
     def receive_response(self):
-        # Receive a response
-        response = super(HTTPConnectionStateReceiverMixIn, self).receive_response()
-
         # Try-finally
         try:
-            return response
+            return super(HTTPConnectionStateReceiverMixIn, self).receive_response()
         finally:
             # Close the socket if needed
             if self.should_close:
@@ -121,34 +118,54 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
         # Set default should close
         self.should_close = True
 
-        # Fetch connection header
-        connection = fetch_header(CONNECTION, headers)
-
         # If connection header not present, return
-        if not connection:
+        if not headers.has(CONNECTION):
             return
 
+        # Fetch connection header
+        (connection,) = headers.pop(CONNECTION)
+
         # Compare header to keepalive
-        self.should_close = compare(connection, KEEP_ALIVE)
+        self.should_close = connection.decode().lower() == CLOSE
 
 
 class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmitter):
     def transmit_artifact(self, artifact):
         # Add connection state header
-        headers = artifact.headers
-        headers.append(Header(CONNECTION, CLOSE if self.should_close else KEEP_ALIVE))
-
-        # Update artifact
-        artifact = artifact._replace(headers=headers)
+        artifact.headers.update(CONNECTION, CLOSE if self.should_close else KEEP_ALIVE)
 
         # Write the artifact
-        return super(HTTPConnectionStateTransmitterMixIn, self).transmit_artifact(artifact)
+        return super(HTTPConnectionStateTransmitterMixIn, self).transmit_artifact(
+            artifact
+        )
 
     def transmit_response(self, response):
         # Try-finally
         try:
-            return super(HTTPConnectionStateTransmitterMixIn, self).transmit_response(response)
+            return super(HTTPConnectionStateTransmitterMixIn, self).transmit_response(
+                response
+            )
         finally:
             # Close the socket if needed
             if self.should_close:
                 self.close()
+
+
+class HTTPHostTransmitterMixIn(HTTPTransmitter):
+    # Set internal host variable
+    host = None
+
+    def transmit_request(self, request):
+        # Create host variable with global
+        host = self.host
+
+        # Make sure host header is defined
+        if not host:
+            # Get IP from peername
+            host, _ = self._socket.getpeername()
+
+        # Update the request with the appropriate header
+        request.headers.update(HOST, host)
+
+        # Transmit the request
+        return super(HTTPHostTransmitterMixIn, self).transmit_request(request)
