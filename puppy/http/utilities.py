@@ -7,7 +7,7 @@ FRAGMENT_SEPARATOR = "#"
 
 def urlsplit(string):
     # Initialize output variables
-    schema, host, port, path = None, None, None
+    schema, host, port, path = None, None, None, None
 
     # Check if schema exists
     if SCHEMA_SEPARATOR in string:

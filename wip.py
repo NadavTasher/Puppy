@@ -19,9 +19,9 @@ def h2(request):
 cli = HTTPClient()
 srv = HTTPServer(("0.0.0.0", 8000), rtr)
 
-try:
-	srv.serve_forever()
-finally:
-	srv.shutdown()
+# try:
+# 	srv.serve_forever()
+# finally:
+# 	srv.shutdown()
 # srv.join()
-# print(cli.get("http://example.com/hello"))
+print(cli.get("http://example.com/hello"))

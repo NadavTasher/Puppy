@@ -61,11 +61,11 @@ class HTTPClient(object):
         # Return the response
         return response
 
-    def get(self, url, params={}, **kwargs):
-        return self.request("GET", url, params, **kwargs)
+    def get(self, url, *args, **kwargs):
+        return self.request("GET", url, *args, **kwargs)
 
-    def post(self, location="/", parameters={}, headers=[], body=None):
-        return self.request("POST", location, None, parameters, headers, body)
+    def post(self, url, *args, **kwargs):
+        return self.request("POST", url, *args, **kwargs)
 
     def interface(self, address):
         # Check if interface already exists
@@ -80,9 +80,9 @@ class HTTPClient(object):
         # Return interface for address
         return self.interfaces[address]
 
-    def request(self, method, url, parameters={}, headers=[], body=None):
+    def request(self, method, url, headers=[], body=None):
         # Parse URL using parser
-        schema, host, port, path = urlparse(url)
+        schema, host, port, path = urlsplit(url)
 
         # Make sure port is defined
         schema = schema or SCHEMA_HTTP
