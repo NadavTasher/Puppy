@@ -2,7 +2,6 @@ import io  # NOQA
 import gzip  # NOQA
 import zlib  # NOQA
 
-# Import required types
 from puppy.http.protocol import HTTPReceiver, HTTPTransmitter  # NOQA
 from puppy.http.constants import (
     HOST,
@@ -14,8 +13,8 @@ from puppy.http.constants import (
     CONTENT_ENCODING,
 )  # NOQA
 
-# Import socket wrapper
-from puppy.socket.wrapper import SocketWrapper  # NOQA
+from puppy.socket.io import CRLF  # NOQA
+from puppy.socket.wrapper import SocketWrapper, CHUNK  # NOQA
 
 
 class HTTPGzipMixIn(SocketWrapper):
@@ -170,5 +169,50 @@ class HTTPHostTransmitterMixIn(HTTPTransmitter):
         # Transmit the request
         return super(HTTPHostTransmitterMixIn, self).transmit_request(request)
 
+
 class HTTPSafeReceiverMixIn(HTTPReceiver):
-    pass
+    # Variables to determine maximum sizes
+    maximum_readline = 4 * 1024
+    maximum_recvall = 4 * 1024 * 1024
+    maximum_recvexact = 64 * 1024 * 1024
+
+    def recvexact(self, length=0, chunk=CHUNK):
+        # Make sure the length is not larger then maxlength
+        assert length < self.maximum_recvexact, "Chunk is too long"
+
+        # Receive using parent
+        return super(HTTPSafeReceiverMixIn, self).recvexact(length, chunk)
+
+    def recvall(self, chunk=CHUNK):
+        # Initialize reading buffer
+        buffer = bytearray()
+        temporary = True
+
+        # Loop until nothing left to read
+        while temporary:
+            # Make sure buffer is not too long
+            assert len(buffer) < self.maximum_recvall, "Buffer is too long"
+
+            # Read new temporary chunk
+            temporary = self.recv(chunk)
+
+            # Append chunk to buffer
+            buffer += temporary
+
+        # Return the buffer
+        return buffer
+
+    def readline(self, separator=CRLF):
+        # Create a reading buffer
+        buffer = bytearray()
+
+        # Loop until CRLF in buffer
+        while separator not in buffer:
+            # Make sure buffer is not too long
+            assert len(buffer) < self.maximum_readline, "Line is too long"
+
+            # Read and append to buffer
+            buffer += self.recvexact(1)
+
+        # Return the buffer without the CRLF
+        return buffer[: -len(separator)]

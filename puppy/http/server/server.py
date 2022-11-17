@@ -3,13 +3,18 @@ import socket  # NOQA
 import select  # NOQA
 
 from puppy.http.http import HTTP  # NOQA
+from puppy.http.mixins import HTTPSafeReceiverMixIn  # NOQA
 from puppy.socket.server import ThreadingTCPServer, StreamRequestHandler  # NOQA
+
+
+class HTTPClass(HTTP, HTTPSafeReceiverMixIn):
+    pass
 
 
 class HTTPWorker(StreamRequestHandler, object):
     def handle(self):
         # Create an interface from the socket
-        interface = HTTP(self.request)
+        interface = HTTPClass(self.request)
 
         # Loop until interface is closed
         try:
