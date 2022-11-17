@@ -1,7 +1,11 @@
+# Schema constants
+SCHEMA_HTTP = "http"
+SCHEMA_HTTPS = "https"
+
 # Protocol constants
 PROTOCOLS = {
-	"http": 80,
-	"https": 443
+	SCHEMA_HTTP: 80,
+	SCHEMA_HTTPS: 443
 }
 
 # Header constants

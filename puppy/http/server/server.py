@@ -3,36 +3,41 @@ import socket  # NOQA
 import select  # NOQA
 
 from puppy.http.http import HTTP  # NOQA
-from puppy.socket.server import Server, Worker  # NOQA
+from puppy.socket.server import ThreadingTCPServer, StreamRequestHandler  # NOQA
 
 
-class HTTPWorker(Worker):
-    # Private interface variable
-    _interface = None
-
-    def initialize(self):
-        # Initialize parent
-        super(HTTPWorker, self).initialize()
-
-        # Create HTTP interface
-        self._interface = HTTP(self._socket)
-
+class HTTPWorker(StreamRequestHandler, object):
     def handle(self):
-        # Receive request, handle, response
-        self._interface.transmit_response(
-            self._parent._handler(self._interface.receive_request())
-        )
+        # Create an interface from the socket
+        interface = HTTP(self.request)
 
-    @property
-    def running(self):
-        # Check if socket is closed
-        return super(HTTPWorker, self).running and not self._interface.closed
+        # Loop until interface is closed
+        try:
+            while not interface.closed:
+                # Check if interface is readable
+                if not interface.wait(1):
+                    continue
+
+                # Read request from client
+                request = interface.receive_request()
+
+                # Handle client request
+                response = self.server.handler(request)
+
+                # Transmit response to client
+                interface.transmit_response(response)
+        except:
+            # Abort the connection
+            interface.abort()
+        finally:
+            # Close the interface
+            interface.close()
 
 
-class HTTPServer(Server):
+class HTTPServer(ThreadingTCPServer, object):
     def __init__(self, address, handler):
-        # Set handler function
-        self._handler = handler
+        # Set the handler
+        self.handler = handler
 
-        # Initialize looper class
+        # Initialize parent
         super(HTTPServer, self).__init__(address, HTTPWorker)

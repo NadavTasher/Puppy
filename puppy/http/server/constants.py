@@ -1,4 +1,4 @@
-from puppy.http.types import Response
+from puppy.http.types import Response  # NOQA
 
 # Create preset responses
 NOT_FOUND = Response(404, "Not Found", None, None)

@@ -169,3 +169,6 @@ class HTTPHostTransmitterMixIn(HTTPTransmitter):
 
         # Transmit the request
         return super(HTTPHostTransmitterMixIn, self).transmit_request(request)
+
+class HTTPSafeReceiverMixIn(HTTPReceiver):
+    pass

@@ -1,14 +1,10 @@
-# Import python libraries
-import zlib
-import socket
-import urllib
-import collections
+import socket  # NOQA
+import urllib  # NOQA
 
-from puppy.http.http import HTTP
-from puppy.http.types import Request, Headers
-from puppy.http.client.types import History
-from puppy.http.client.parser import parse
-from puppy.http.client.constants import *
+from puppy.http.http import HTTP  # NOQA
+from puppy.http.types import Request, Headers  # NOQA
+from puppy.http.utilities import urlsplit  # NOQA
+from puppy.http.client.constants import PROTOCOLS, COOKIE, SET_COOKIE, SCHEMA_HTTP  # NOQA
 
 
 class HTTPClient(object):
@@ -86,17 +82,21 @@ class HTTPClient(object):
 
     def request(self, method, url, parameters={}, headers=[], body=None):
         # Parse URL using parser
-        url = parse(url)
+        schema, host, port, path = urlparse(url)
+
+        # Make sure port is defined
+        schema = schema or SCHEMA_HTTP
+        port = port or PROTOCOLS[schema]
 
         # Find IP address of host
-        address = socket.gethostbyname(url.host), url.port
+        address = socket.gethostbyname(host), port
 
         # Get interface for request by address and update host
         interface = self.interface(address)
-        interface.host = url.host
+        interface.host = host
 
         # Create request object
-        request = Request(method, url.path, Headers(headers), body)
+        request = Request(method, path, Headers(headers), body)
 
         # Update the request
         request = self._update_request(request)
@@ -111,7 +111,7 @@ class HTTPClient(object):
         response = self._update_response(response)
 
         # Add new history item
-        self.history.append(History(request, response))
+        self.history.append((request, response))
 
         # Return response
         return response

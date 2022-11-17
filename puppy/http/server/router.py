@@ -1,12 +1,14 @@
 import os  # NOQA
 
 from puppy.http.types import Response  # NOQA
-from puppy.http.server.constants import NOT_FOUND  # NOQA
+from puppy.http.utilities import pathsplit  # NOQA
+from puppy.http.server.constants import NOT_FOUND, INTERNAL_ERROR  # NOQA
 
 
 class Router(object):
-    # Private routes dictionary
-    _routes = dict()
+    def __init__(self):
+        # Private routes dictionary
+        self.routes = dict()
 
     def get(self, location):
         return self.attach(location, "GET")
@@ -21,10 +23,10 @@ class Router(object):
             if methods:
                 for method in methods:
                     # Attach function to routes
-                    self._routes[(method, location)] = function
+                    self.routes[(method, location)] = function
             else:
                 # Attach to a wildcard method
-                self._routes[(None, location)] = function
+                self.routes[(None, location)] = function
 
             # Return the function with no change
             return function
@@ -51,20 +53,27 @@ class Router(object):
         method = request.method.decode()
         location = request.location.decode()
 
+        # Parse the location
+        path, query, fragment = pathsplit(location)
+
         # Check if has a valid route exists
         routes = [
             # Method specific route
-            (method, location),
+            (method, path),
             # Method wildcard route
-            (None, location),
+            (None, path),
         ]
 
         # Check if any valid route exists
         for route in routes:
             # Check if route exists in registry
-            if route in self._routes:
-                # Route the request
-                return self._routes[route](request)
+            if route in self.routes:
+                try:
+                    # Route the request
+                    return self.routes[route](request)
+                except:
+                    # Return 500!
+                    return INTERNAL_ERROR
 
         # Return 404!
         return NOT_FOUND
