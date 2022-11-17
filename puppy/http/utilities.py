@@ -49,7 +49,7 @@ def pathsplit(string):
     # Check if query exists
     if QUERY_SEPARATOR in string:
         # Split by query separator
-        path, query = string.split(PATH_SEPARATOR, 1)
+        path, query = string.split(QUERY_SEPARATOR, 1)
     else:
         # The path is the string
         path = string
