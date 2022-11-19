@@ -4,7 +4,7 @@ import urllib  # NOQA
 from puppy.http.http import HTTP  # NOQA
 from puppy.http.types import Request, Headers  # NOQA
 from puppy.http.utilities import urlsplit  # NOQA
-from puppy.http.client.constants import PROTOCOLS, COOKIE, SET_COOKIE, SCHEMA_HTTP  # NOQA
+from puppy.http.client.constants import COOKIE, SET_COOKIE, SCHEMA_HTTP, SCHEMA_MAPPING  # NOQA
 
 
 class HTTPClient(object):
@@ -62,10 +62,10 @@ class HTTPClient(object):
         return response
 
     def get(self, url, *args, **kwargs):
-        return self.request("GET", url, *args, **kwargs)
+        return self.request(b"GET", url, *args, **kwargs)
 
     def post(self, url, *args, **kwargs):
-        return self.request("POST", url, *args, **kwargs)
+        return self.request(b"POST", url, *args, **kwargs)
 
     def interface(self, address):
         # Check if interface already exists
@@ -86,7 +86,7 @@ class HTTPClient(object):
 
         # Make sure port is defined
         schema = schema or SCHEMA_HTTP
-        port = port or PROTOCOLS[schema]
+        port = port or SCHEMA_MAPPING[schema]
 
         # Find IP address of host
         address = socket.gethostbyname(host), port

@@ -2,16 +2,16 @@
 VERSION = 1.1
 
 # Header constants
-HOST = "Host"
-CONNECTION = "Connection"
-CONTENT_TYPE = "Content-Type"
-CONTENT_LENGTH = "Content-Length"
-ACCEPT_ENCODING = "Accept-Encoding"
-CONTENT_ENCODING = "Content-Encoding"
-TRANSFER_ENCODING = "Transfer-Encoding"
+HOST = b"Host"
+CONNECTION = b"Connection"
+CONTENT_TYPE = b"Content-Type"
+CONTENT_LENGTH = b"Content-Length"
+ACCEPT_ENCODING = b"Accept-Encoding"
+CONTENT_ENCODING = b"Content-Encoding"
+TRANSFER_ENCODING = b"Transfer-Encoding"
 
 # Value constants
-GZIP = "gzip"
-CLOSE = "close"
-CHUNKED = "chunked"
-KEEP_ALIVE = "keep-alive"
+GZIP = b"gzip"
+CLOSE = b"close"
+CHUNKED = b"chunked"
+KEEP_ALIVE = b"keep-alive"

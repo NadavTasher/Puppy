@@ -13,8 +13,7 @@ from puppy.http.constants import (
     CONTENT_ENCODING,
 )  # NOQA
 
-from puppy.socket.io import CRLF  # NOQA
-from puppy.socket.wrapper import SocketWrapper, CHUNK  # NOQA
+from puppy.socket.wrapper import SocketWrapper, CRLF  # NOQA
 
 
 class HTTPGzipMixIn(SocketWrapper):
@@ -38,10 +37,10 @@ class HTTPGzipReceiverMixIn(HTTPGzipMixIn, HTTPReceiver):
         (content_encoding,) = artifact.headers.pop(CONTENT_ENCODING)
 
         # Make sure that the gzip encoding was provided
-        assert content_encoding.decode().lower() == GZIP
+        assert content_encoding.lower() == GZIP
 
         # Decompress content as gzip
-        artifact.content = zlib.decompress(bytes(artifact.content), 40)
+        artifact.content = zlib.decompress(artifact.content, 40)
 
         # Return the artifact
         return artifact
@@ -56,7 +55,7 @@ class HTTPGzipReceiverMixIn(HTTPGzipMixIn, HTTPReceiver):
 
         # Split the header value and loop
         for accepted_encodings in headers.fetch(ACCEPT_ENCODING):
-            for encoding in accepted_encodings.split(","):
+            for encoding in accepted_encodings.split(b","):
                 if encoding.strip().lower() == GZIP:
                     # Compression is supported!
                     self.compression_support = True
@@ -79,7 +78,7 @@ class HTTPGzipTransmitterMixIn(HTTPGzipMixIn, HTTPTransmitter):
             # Compress the content using gzip
             temporary = io.BytesIO()
             with gzip.GzipFile(fileobj=temporary, mode="w") as compressor:
-                compressor.write(bytes(response.content))
+                compressor.write(response.content)
 
             # Update content with value
             response.content = temporary.getvalue()
@@ -125,7 +124,7 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
         (connection,) = headers.pop(CONNECTION)
 
         # Compare header to keepalive
-        self.should_close = connection.decode().lower() == CLOSE
+        self.should_close = connection.lower() == CLOSE
 
 
 class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmitter):
@@ -176,16 +175,16 @@ class HTTPSafeReceiverMixIn(HTTPReceiver):
     maximum_recvall = 4 * 1024 * 1024
     maximum_recvexact = 64 * 1024 * 1024
 
-    def recvexact(self, length=0, chunk=CHUNK):
+    def recvexact(self, length=0):
         # Make sure the length is not larger then maxlength
         assert length < self.maximum_recvexact, "Chunk is too long"
 
         # Receive using parent
-        return super(HTTPSafeReceiverMixIn, self).recvexact(length, chunk)
+        return super(HTTPSafeReceiverMixIn, self).recvexact(length)
 
-    def recvall(self, chunk=CHUNK):
+    def recvall(self):
         # Initialize reading buffer
-        buffer = bytearray()
+        buffer = bytes()
         temporary = True
 
         # Loop until nothing left to read
@@ -194,7 +193,7 @@ class HTTPSafeReceiverMixIn(HTTPReceiver):
             assert len(buffer) < self.maximum_recvall, "Buffer is too long"
 
             # Read new temporary chunk
-            temporary = self.recv(chunk)
+            temporary = self.recv(self._chunk)
 
             # Append chunk to buffer
             buffer += temporary
@@ -202,12 +201,12 @@ class HTTPSafeReceiverMixIn(HTTPReceiver):
         # Return the buffer
         return buffer
 
-    def readline(self, separator=CRLF):
+    def readline(self):
         # Create a reading buffer
-        buffer = bytearray()
+        buffer = bytes()
 
         # Loop until CRLF in buffer
-        while separator not in buffer:
+        while self._separator not in buffer:
             # Make sure buffer is not too long
             assert len(buffer) < self.maximum_readline, "Line is too long"
 
@@ -215,4 +214,4 @@ class HTTPSafeReceiverMixIn(HTTPReceiver):
             buffer += self.recvexact(1)
 
         # Return the buffer without the CRLF
-        return buffer[: -len(separator)]
+        return buffer[: -len(self._separator)]

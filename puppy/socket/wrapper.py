@@ -2,12 +2,18 @@ import struct  # NOQA
 import socket  # NOQA
 import select  # NOQA
 
-CHUNK = 4096
+# Defaults for wrapper
+CRLF = b"\r\n"
+CHUNK = 4 * 1024
 
 
 class SocketWrapper(object):
     def __init__(self, wrapped):
-        # Set internal socket
+        # Set internal parameter
+        self._chunk = CHUNK
+        self._separator = CRLF
+
+        # Set internal variables
         self._closed = False
         self._socket = wrapped
 
@@ -22,14 +28,14 @@ class SocketWrapper(object):
         # Check if socket is readable
         return self._socket in readable
 
-    def recvexact(self, length=0, chunk=CHUNK):
+    def recvexact(self, length=0):
         # Initialize reading buffer
-        buffer = bytearray()
+        buffer = bytes()
 
         # Loop until buffer is full
         while len(buffer) < length:
             # Receive the next chunk into a temporary buffer
-            temporary = self.recv(min(length - len(buffer), chunk))
+            temporary = self.recv(min(length - len(buffer), self._chunk))
 
             # Make sure something was read to the temporary buffer
             if not temporary:
@@ -41,15 +47,15 @@ class SocketWrapper(object):
         # Return the buffer
         return buffer
 
-    def recvall(self, chunk=CHUNK):
+    def recvall(self):
         # Initialize reading buffer
-        buffer = bytearray()
+        buffer = bytes()
         temporary = True
 
         # Loop until nothing left to read
         while temporary:
             # Read new temporary chunk
-            temporary = self.recv(chunk)
+            temporary = self.recv(self._chunk)
 
             # Append chunk to buffer
             buffer += temporary
@@ -91,3 +97,43 @@ class SocketWrapper(object):
 
         # Set the closed flag
         self._closed = True
+
+
+class SocketReader(SocketWrapper):
+    def readline(self):
+        # Create a reading buffer
+        buffer = bytes()
+
+        # Loop until CRLF in buffer
+        while self._separator not in buffer:
+            buffer += self.recvexact(1)
+
+        # Strip the buffer of the separator
+        return buffer[: -len(self._separator)]
+
+    def readlines(self):
+        # Read first line
+        line = self.readline()
+
+        # Loop while line is not empty
+        while line:
+            # Yield the received line
+            yield line
+
+            # Read the next line
+            line = self.readline()
+
+
+class SocketWriter(SocketWrapper):
+    def writeline(self, line=None):
+        # Write line if exists
+        if line:
+            self.send(line)
+
+        # Write line separator
+        self.send(self._separator)
+
+    def writelines(self, lines=[]):
+        # Loop over lines and send them
+        for line in lines:
+            self.writeline(line)

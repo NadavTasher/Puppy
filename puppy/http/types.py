@@ -49,7 +49,7 @@ class Request(Artifact):
 
     @property
     def header(self):
-        return "%s %s HTTP/%.1f" % (self.method.upper(), self.location, VERSION)
+        return b"%s %s HTTP/%.1f" % (self.method.upper(), self.location, VERSION)
 
     def __repr__(self):
         return "%s(%r, %r, %r, %r)" % (
@@ -72,7 +72,7 @@ class Response(Artifact):
 
     @property
     def header(self):
-        return "HTTP/%.1f %d %s" % (VERSION, self.status, self.message)
+        return b"HTTP/%.1f %d %s" % (VERSION, self.status, self.message)
 
     def __repr__(self):
         return "%s(%r, %r, %r, %r)" % (
@@ -91,10 +91,10 @@ class Headers(object):
 
         # Add all headers
         for name, value in headers:
-            self.add_header(name, value)
+            self.append(name, value)
 
     def has(self, name):
-        return name.decode().lower() in self.store.keys()
+        return bytes(name).lower() in self.store.keys()
 
     def new(self, name):
         # Make sure name does not exist
@@ -102,7 +102,7 @@ class Headers(object):
             return
 
         # Create new entry
-        self.store[name.decode().lower()] = (name, list())
+        self.store[bytes(name).lower()] = (bytes(name), list())
 
     def pop(self, name):
         try:
@@ -118,7 +118,7 @@ class Headers(object):
             return list()
 
         # Fetch values from store
-        _, values = self.store[name.decode().lower()]
+        _, values = self.store[bytes(name).lower()]
 
         # Return the values
         return values
@@ -133,7 +133,7 @@ class Headers(object):
         values.append(value)
 
         # Update store values
-        self.store[name.decode().lower()] = (name, values)
+        self.store[bytes(name).lower()] = (bytes(name), values)
 
     def update(self, name, value):
         # Create new entry if does not exist
@@ -141,7 +141,7 @@ class Headers(object):
             self.new(name)
 
         # Update store values
-        self.store[name.decode().lower()] = (name, [value])
+        self.store[bytes(name).lower()] = (bytes(name), [value])
 
     def remove(self, name):
         # Make sure the header exists
@@ -149,7 +149,7 @@ class Headers(object):
             return
 
         # Remove key from list and value from dict
-        self.store.pop(name.decode().lower())
+        self.store.pop(bytes(name).lower())
 
     def __iter__(self):
         # Loop over values and yield

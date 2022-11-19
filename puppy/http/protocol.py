@@ -1,5 +1,5 @@
 # Import socket utilities
-from puppy.socket.io import SocketReader, SocketWriter
+from puppy.socket.wrapper import SocketReader, SocketWriter
 
 # Import required types
 from puppy.http.types import Received, Request, Response, Headers
@@ -28,14 +28,15 @@ class HTTPReader(SocketReader):
         # Loop over all lines
         for line in self.readlines():
             # Validate header structure
-            if ":" not in line:
+            if b":" not in line:
                 continue
 
             # Split header line and create object
-            name, value = line.split(":", 1)
+            name, value = line.split(b":", 1)
+            name, value = name.strip(), value.strip()
 
             # Yield new header
-            headers.append(name.strip(), value.strip())
+            headers.append(name, value)
 
         # Return the headers object
         return headers
@@ -70,7 +71,7 @@ class HTTPReader(SocketReader):
     def receive_content_by_chunks(self):
         # Initialize buffer and length
         length = None
-        buffer = bytearray()
+        buffer = bytes()
 
         # Loop until length is 0
         while length != 0:
@@ -100,7 +101,7 @@ class HTTPWriter(SocketWriter):
 
     def transmit_header(self, name, value):
         # Write header in "key: value" format
-        self.writeline("%s: %s" % (name, value))
+        self.writeline(b"%s: %s" % (name, value))
 
     def transmit_headers(self, headers):
         # Loop over headers and transmit them
@@ -110,7 +111,7 @@ class HTTPWriter(SocketWriter):
     def transmit_content(self, content):
         if content:
             # Write content-length header
-            self.transmit_header(CONTENT_LENGTH, str(len(content)))
+            self.transmit_header(CONTENT_LENGTH, b"%d" % len(content))
 
             # Write HTTP separator
             self.writeline()
