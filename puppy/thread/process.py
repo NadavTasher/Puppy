@@ -65,8 +65,7 @@ class Process(Looper):
 		# Create the process
 		self._process = subprocess.Popen(
 			self.command,
-			stdout=subprocess.PIPE,
-			stderr=subprocess.PIPE,
+			
 			shell=True,
 		)
 

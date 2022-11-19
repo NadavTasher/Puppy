@@ -1,7 +1,18 @@
 import os  # NOQA
 import tempfile  # NOQA
+import contextlib  # NOQA
 
-from puppy.utilities.context import contextmanager  # NOQA
+
+@contextlib.contextmanager
+def mktemp(*args, **kwargs):
+    # Create temporary path
+    path = tempfile.mktemp(*args, **kwargs)
+
+    # Try yielding the path
+    try:
+        yield path
+    finally:
+        remove(path)
 
 
 def remove(path):
@@ -20,15 +31,3 @@ def remove(path):
 
         # Remove empty directory
         os.rmdir(path)
-
-
-@contextmanager
-def mktemp(*args, **kwargs):
-    # Create temporary path
-    path = tempfile.mktemp(*args, **kwargs)
-
-    # Try yielding the path
-    try:
-        yield path
-    finally:
-        remove(path)

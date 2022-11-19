@@ -19,7 +19,16 @@ def h2(request):
 cli = HTTPClient()
 srv = HTTPServer(("0.0.0.0", 8000), rtr)
 
-with srv:
-	srv.serve_forever()
+# try:
+# 	srv.serve_forever(0.5)
+# finally:
+# 	srv.shutdown()
+
+# from puppy.utilities.bpf import bpf
+
+# print((bpf("tcp") & bpf("host 192.168.0.1")) < 200)
+from puppy.utilities.process import detached
+print(~detached("echo Hello; sleep 10", seconds=1))
+
 # srv.join()
 # print(cli.get(b"http://example.com/hello"))

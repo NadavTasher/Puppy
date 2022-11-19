@@ -4,13 +4,13 @@ from threading import Thread, Event, Lock
 
 class Looper(Thread):
     def __init__(self):
+        # Initialize thread class
+        super(Looper, self).__init__()
+        
         # Initialize internal variables
         self._lock = Lock()
         self._event = Event()
         self._parent = None
-
-        # Initialize thread class
-        super(Looper, self).__init__()
 
     def __repr__(self):
         return "<%s running=%r>" % (self.__class__.__name__, self.running)

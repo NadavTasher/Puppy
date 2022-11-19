@@ -1,12 +1,13 @@
-# Import looper classes
-from puppy.thread.looper import Looper
-
-# Import threading classes
-from threading import Thread, Event, Lock
+import sys  # NOQA
+import functools  # NOQA
+import threading  # NOQA
 
 
-class Future(Thread):
+class Future(threading.Thread):
     def __init__(self, function, timeout=None):
+        # Initialize parent
+        super(Future, self).__init__()
+
         # Set internal variables
         self._args = None
         self._kwargs = None
@@ -21,8 +22,8 @@ class Future(Thread):
         self._timeout = timeout
         self._function = function
 
-        # Initialize parent
-        super(Future, self).__init__()
+        # Set thread parameters
+        self.daemon = True
 
     def __call__(self, *args, **kwargs):
         # Make sure not running or finished
@@ -45,7 +46,7 @@ class Future(Thread):
         try:
             # Store the returned result
             self._result = self._function(*self._args, **self._kwargs)
-        except Exception as exception:
+        except BaseException as exception:
             # Store the raised exception
             self._exception = exception
         finally:
@@ -82,6 +83,7 @@ class Future(Thread):
 
 def future(function):
     # Create wrapper for function
+    @functools.wraps(function)
     def wrapper(*args, **kwargs):
         # Create future and execute function
         return Future(function)(*args, **kwargs)

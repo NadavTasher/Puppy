@@ -1,3 +1,18 @@
+import random  # NOQA
+
+
+def random(length=16, charset="abcdefghijklmnopqrstuvwxyz0123456789"):
+    # Create temporary output
+    output = str()
+
+    # Loop until length of output is reached
+    while len(output) < length:
+        output += charset[random.randint(len(charset))]
+
+    # Return the output
+    return output
+
+
 def format(string, *args, **kwargs):
     # Create temporary output
     haystack = string
@@ -22,3 +37,14 @@ def format(string, *args, **kwargs):
 
     # Return formatted haystack
     return haystack
+
+
+def charset(string, charset="abcdefghijklmnopqrstuvwxyz0123456789"):
+    # Loop over string
+    for char in string:
+        # Check if character is in the charset
+        if char not in charset:
+            return False
+
+    # String is OK
+    return True
