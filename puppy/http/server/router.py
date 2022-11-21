@@ -1,4 +1,5 @@
 import os  # NOQA
+import logging  # NOQA
 
 from puppy.http.types import Response  # NOQA
 from puppy.http.utilities import pathsplit  # NOQA
@@ -86,4 +87,10 @@ class HTTPRouter(object):
         path, query, fragment = pathsplit(location)
 
         # Handle the request
-        return self.handle(method, path, request)
+        response = self.handle(method, path, request)
+
+        # Log the request
+        logging.info("%s %s - %d" % (method, path, response.status))
+
+        # Return the response
+        return response
