@@ -75,9 +75,6 @@ class HTTPRouter(object):
                 # Wrap the result in a response
                 return Response(200, b"OK", None, result)
             except:
-                # Print the traceback
-                import traceback
-                logging.error(traceback.format_exc())
                 # The route has raised an exception
                 return Response(500, b"Internal Server Error", None, None)
         else:
