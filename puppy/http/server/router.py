@@ -8,7 +8,7 @@ GET = b"GET"
 POST = b"POST"
 
 
-class Router(object):
+class HTTPRouter(object):
     def __init__(self):
         # Private routes dictionary
         self.routes = dict()
@@ -37,7 +37,7 @@ class Router(object):
         # Return wrapper
         return wrapper
 
-    def static(self, path, name="/"):
+    def static(self, path, name=b"/", indexes=[]):
         # Check if the path is a file
         if os.path.isfile(path):
             # Read the path ahead-of-time
@@ -52,9 +52,13 @@ class Router(object):
                 # Add static file
                 self.static(os.path.join(path, subname), os.path.join(name, subname))
 
+                # If the subname matches an index, add it too
+                if subname in indexes:
+                    self.static(os.path.join(path, subname), name)
+
     def handle(self, method, path, request):
         # Try finding a handler
-        for route in ((method, path), (None, path)):
+        for route in ((method, path), (None, path), (method, path.rstrip(b"/")), (None, path.rstrip(b"/"))):
             # Check if route exists in registry
             if route not in self.routes:
                 continue
