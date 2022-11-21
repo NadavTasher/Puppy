@@ -14,6 +14,15 @@ class HTTPRouter(object):
         # Private routes dictionary
         self.routes = dict()
 
+    def add(self, location, function, *methods):
+        if methods:
+            for method in methods:
+                # Attach function to routes
+                self.routes[(method, location)] = function
+        else:
+            # Attach to a wildcard method
+            self.routes[(None, location)] = function
+
     def get(self, location):
         return self.attach(location, GET)
 
@@ -24,13 +33,7 @@ class HTTPRouter(object):
         # Create attachment function
         def wrapper(function):
             # Attach to all required methods
-            if methods:
-                for method in methods:
-                    # Attach function to routes
-                    self.routes[(method, location)] = function
-            else:
-                # Attach to a wildcard method
-                self.routes[(None, location)] = function
+            self.add(location, function, methods)
 
             # Return the function with no change
             return function
@@ -46,7 +49,7 @@ class HTTPRouter(object):
                 contents = file.read()
 
             # Create a lambda to the path
-            self.routes[(GET, name)] = lambda request: contents
+            self.add(name, lambda request: contents, GET)
         else:
             # Loop over paths and load them as routes
             for subname in os.listdir(path):
