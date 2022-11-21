@@ -1,5 +1,6 @@
 import os  # NOQA
 import logging  # NOQA
+import functools  # NOQA
 
 from puppy.http.types import Response  # NOQA
 from puppy.http.utilities import pathsplit  # NOQA
@@ -22,6 +23,7 @@ class HTTPRouter(object):
 
     def attach(self, location, *methods):
         # Create attachment function
+        @functools.wraps(function)
         def wrapper(function):
             # Attach to all required methods
             if methods:
