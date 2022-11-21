@@ -65,6 +65,7 @@ class HTTPSServer(ThreadingTCPServer, object):
         # Create a new context
         self.context = ssl.create_default_context()
         self.context.check_hostname = False
+        self.context.verify_mode = ssl.CERT_OPTIONAL
 
         # Initialize parent
         super(HTTPSServer, self).__init__(address, HTTPSWorker)
