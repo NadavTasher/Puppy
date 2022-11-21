@@ -1,3 +1,6 @@
+import functools  # NOQA
+
+
 def check(value, validator):
     # Check if type is a type
     if isinstance(validator, type):
