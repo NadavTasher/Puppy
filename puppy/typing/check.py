@@ -35,14 +35,14 @@ def kwargcheck(**type_kwargs):
     def generator(function):
         # Create validator wrapper
         @functools.wraps(function)
-        def wrapper(**value_kwargs):
+        def wrapper(*value_args, **value_kwargs):
             # Loop over type arguments
             for name, value in type_kwargs.items():
                 # Validate the type
                 validate(value_kwargs.get(name), value)
 
             # Call the target function
-            return function(**value_kwargs)
+            return function(*value_args, **value_kwargs)
 
         # Return the wrapper
         return wrapper
