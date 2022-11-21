@@ -1,6 +1,10 @@
 # Operating constants
 VERSION = 1.1
 
+# Method constants
+GET = b"GET"
+POST = b"POST"
+
 # Header constants
 HOST = b"Host"
 CONNECTION = b"Connection"

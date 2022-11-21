@@ -4,7 +4,14 @@ import urllib  # NOQA
 from puppy.http.http import HTTP  # NOQA
 from puppy.http.types import Request, Headers  # NOQA
 from puppy.http.utilities import urlsplit  # NOQA
-from puppy.http.client.constants import COOKIE, SET_COOKIE, SCHEMA_HTTP, SCHEMA_MAPPING  # NOQA
+from puppy.http.constants import GET, POST  # NOQA
+from puppy.http.client.constants import (
+    COOKIE,
+    SET_COOKIE,
+    SCHEMA_HTTP,
+    SCHEMA_HTTPS,
+    SCHEMA_MAPPING,
+)  # NOQA
 
 
 class HTTPClient(object):
@@ -40,19 +47,19 @@ class HTTPClient(object):
         # Update cookie jar with response headers
         for header in response.headers.pop(SET_COOKIE):
             # Check if semicolon exists
-            if ";" in value:
+            if b";" in value:
                 # Split by semicolon
-                cookie, _ = value.split(";", 1)
+                cookie, _ = value.split(b";", 1)
             else:
                 # Take as is
                 cookie = value
 
             # Make sure '=' exists
-            if "=" not in cookie:
+            if b"=" not in cookie:
                 continue
 
             # Split and decode
-            name, value = cookie.split("=", 1)
+            name, value = cookie.split(b"=", 1)
             name, value = urllib.unquote(name), urllib.unquote(value)
 
             # Update cookie jar
@@ -62,17 +69,27 @@ class HTTPClient(object):
         return response
 
     def get(self, url, *args, **kwargs):
-        return self.request(b"GET", url, *args, **kwargs)
+        return self.request(GET, url, *args, **kwargs)
 
     def post(self, url, *args, **kwargs):
-        return self.request(b"POST", url, *args, **kwargs)
+        return self.request(POST, url, *args, **kwargs)
 
-    def interface(self, address):
+    def wrap(self, connection, host=None):
+        pass
+
+    def interface(self, host, port, tls=False):
+        # Determine address of host
+        address = socket.gethostbyname(host), port
+
         # Check if interface already exists
         if address not in self.interfaces:
             # Connect to socket
             connection = socket.socket()
             connection.connect(address)
+
+            # Wrap with TLS connection if needed
+            if tls:
+                connection = self.wrap(connection, host)
 
             # Create client interface
             self.interfaces[address] = self.implementation(connection)
@@ -88,11 +105,8 @@ class HTTPClient(object):
         schema = schema or SCHEMA_HTTP
         port = port or SCHEMA_MAPPING[schema]
 
-        # Find IP address of host
-        address = socket.gethostbyname(host), port
-
         # Get interface for request by address and update host
-        interface = self.interface(address)
+        interface = self.interface(host, port, schema == SCHEMA_HTTPS)
         interface.host = host
 
         # Create request object

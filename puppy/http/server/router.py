@@ -3,10 +3,7 @@ import logging  # NOQA
 
 from puppy.http.types import Response  # NOQA
 from puppy.http.utilities import pathsplit  # NOQA
-
-# HTTP methods
-GET = b"GET"
-POST = b"POST"
+from puppy.http.constants import GET, POST  # NOQA
 
 
 class HTTPRouter(object):
