@@ -58,10 +58,13 @@ class HTTPServer(ThreadingTCPServer, object):
 
 
 class HTTPSServer(ThreadingTCPServer, object):
-    def __init__(self, address, handler, context):
-        # Set the context and handler
+    def __init__(self, address, handler):
+        # Set the handler
         self.handler = handler
-        self.context = context
+
+        # Create a new context
+        self.context = ssl.create_default_context()
+        self.context.check_hostname = False
 
         # Initialize parent
         super(HTTPSServer, self).__init__(address, HTTPSWorker)
