@@ -1,4 +1,4 @@
-# Import python modules
+import ssl  # NOQA
 import socket  # NOQA
 import select  # NOQA
 
@@ -39,6 +39,15 @@ class HTTPWorker(StreamRequestHandler, object):
             interface.close()
 
 
+class HTTPSWorker(HTTPWorker):
+    def handle(self):
+        # Wrap with TLS implementation
+        self.request = self.server.context.wrap_socket(self.request, server_side=True)
+
+        # Handle using parent
+        return super(HTTPSWorker, self).handle()
+
+
 class HTTPServer(ThreadingTCPServer, object):
     def __init__(self, address, handler):
         # Set the handler
@@ -46,3 +55,13 @@ class HTTPServer(ThreadingTCPServer, object):
 
         # Initialize parent
         super(HTTPServer, self).__init__(address, HTTPWorker)
+
+
+class HTTPSServer(ThreadingTCPServer, object):
+    def __init__(self, address, handler, context):
+        # Set the context and handler
+        self.handler = handler
+        self.context = context
+
+        # Initialize parent
+        super(HTTPSServer, self).__init__(address, HTTPSWorker)

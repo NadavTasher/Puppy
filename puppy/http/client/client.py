@@ -1,3 +1,4 @@
+import ssl  # NOQA
 import socket  # NOQA
 import urllib  # NOQA
 
@@ -75,7 +76,15 @@ class HTTPClient(object):
         return self.request(POST, url, *args, **kwargs)
 
     def wrap(self, connection, host=None):
-        pass
+        # Wrap connection with SSL
+        context = ssl.create_default_context()
+
+        # Disable certificate check
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+
+        # Wrap connection using context
+        return context.wrap_socket(connection, server_hostname=host)
 
     def interface(self, host, port, tls=False):
         # Determine address of host
