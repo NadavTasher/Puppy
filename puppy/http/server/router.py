@@ -58,7 +58,7 @@ class HTTPRouter(object):
 
     def handle(self, method, path, request):
         # Try finding a handler
-        for route in ((method, path), (None, path), (method, path.rstrip(b"/")), (None, path.rstrip(b"/"))):
+        for route in ((method, path), (None, path)):
             # Check if route exists in registry
             if route not in self.routes:
                 continue
