@@ -22,9 +22,6 @@ class Future(threading.Thread):
         self._timeout = timeout
         self._function = function
 
-        # Set thread parameters
-        self.daemon = True
-
     def __call__(self, *args, **kwargs):
         # Make sure not running or finished
         assert not (self._running or self._finished)
