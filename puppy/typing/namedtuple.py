@@ -2,8 +2,8 @@
 import collections
 
 # Import types for type checking
+from puppy.typing.check import validate
 from puppy.typing.types import Any, List, Tuple
-from puppy.typing.validator import validate
 
 
 def NamedTuple(name, fields):
