@@ -1,7 +1,7 @@
 import threading  # NOQA
 
 
-class Stoppable(threading.Thread):
+class Stoppable(threading.Thread, object):
 	def __init__(self):
 		# Initialize parent
 		super(Stoppable, self).__init__()
