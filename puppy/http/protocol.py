@@ -117,7 +117,7 @@ class HTTPWriter(SocketWriter):
             self.writeline()
 
             # Send content as is
-            self.send(content)
+            self.sendall(content)
         else:
             # Write double HTTP separator
             self.writeline()

@@ -128,10 +128,10 @@ class SocketWriter(SocketWrapper):
     def writeline(self, line=None):
         # Write line if exists
         if line:
-            self.send(line)
+            self.sendall(line)
 
         # Write line separator
-        self.send(self._separator)
+        self.sendall(self._separator)
 
     def writelines(self, lines=[]):
         # Loop over lines and send them
