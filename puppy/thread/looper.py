@@ -1,19 +1,15 @@
-# Import threading classes
-from threading import Thread, Event, Lock
+import threading  # NOQA
+
+from puppy.thread.stoppable import Stoppable  # NOQA
 
 
-class Looper(Thread):
+class Looper(Stoppable):
     def __init__(self):
         # Initialize thread class
         super(Looper, self).__init__()
-        
-        # Initialize internal variables
-        self._lock = Lock()
-        self._event = Event()
-        self._parent = None
 
-    def __repr__(self):
-        return "<%s running=%r>" % (self.__class__.__name__, self.running)
+        # Initialize internal variables
+        self._parent = None
 
     def __enter__(self):
         # Initialize self
@@ -27,30 +23,22 @@ class Looper(Thread):
     def run(self):
         # Use context manager
         with self:
-            # Loop until shutdown
-            try:
-                while self.running:
-                    # Acquire lock before looping
-                    with self._lock:
-                        # Execute single loop
-                        self.loop()
-            finally:
-                # Stop self to kill children
-                self.stop()
+            # Run inherited function
+            super(Looper, self).run()
 
     @property
-    def running(self):
-        # Check if event is set
-        if self._event.is_set():
-            return False
+    def stopped(self):
+        # Check if stoppable stopped
+        if super(Looper, self).stopped:
+            return True
 
         # Check if parent is running
         if self._parent:
-            if not self._parent.running:
-                return False
+            if self._parent.stopped:
+                return True
 
         # Still running!
-        return True
+        return False
 
     def reset(self):
         # Acquire the lock and restart
@@ -61,21 +49,10 @@ class Looper(Thread):
             # Initialize the looper
             self.initialize()
 
-    def stop(self, wait=False):
-        # Set the event
-        self._event.set()
-
-        # Wait for the thread to finish
-        if wait:
-            self.join()
-
     def adopt(self, parent):
         # Set the new parent and return child
         self._parent = parent
         return self
-
-    def loop(self):
-        raise NotImplementedError()
 
     def initialize(self):
         pass
