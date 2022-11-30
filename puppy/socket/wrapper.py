@@ -47,13 +47,13 @@ class SocketWrapper(object):
         # Return the buffer
         return buffer
 
-    def recvall(self):
+    def recvall(self, timeout=5):
         # Initialize reading buffer
         buffer = bytes()
         temporary = True
 
         # Loop until nothing left to read
-        while temporary:
+        while temporary and self.wait(timeout):
             # Read new temporary chunk
             temporary = self.recv(self._chunk)
 

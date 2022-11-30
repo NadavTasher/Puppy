@@ -1,6 +1,5 @@
 import io  # NOQA
 import gzip  # NOQA
-import zlib  # NOQA
 
 from puppy.http.protocol import HTTPReceiver, HTTPTransmitter  # NOQA
 from puppy.http.constants import (
@@ -40,7 +39,8 @@ class HTTPGzipReceiverMixIn(HTTPGzipMixIn, HTTPReceiver):
         assert content_encoding.lower() == GZIP
 
         # Decompress content as gzip
-        artifact.content = zlib.decompress(artifact.content, 40)
+        with gzip.GzipFile(fileobj=io.BytesIO(artifact.content), mode="rb") as decompressor:
+            artifact.content = decompressor.read()
 
         # Return the artifact
         return artifact
