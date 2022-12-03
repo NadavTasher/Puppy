@@ -53,11 +53,8 @@ class HTTPSWorker(HTTPHandler):
         # Initialize parent
         super(HTTPSWorker, self).initialize()
 
-        # If a context was defined, wrap socket
-        if self._context:
-            self._socket = self._parent.context.wrap_socket(
-                self._socket, server_side=True
-            )
+        # Wrap socket with SSL using parent's context
+        self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
 
         # Initialize the interface
         self._interface = HTTPClass(self._socket)
