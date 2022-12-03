@@ -12,6 +12,21 @@ def check(value, validator):
         for item in validator:
             if check(value, item):
                 return True
+
+        # Validation has failed
+        return False
+    elif isinstance(validator, dict):
+        # Make sure the value is also a dict
+        if not check(value, dict):
+            return False
+
+        # Loop over validators and check the dict
+        for key, subvalidator in validator.items():
+            if not check(value.get(key), subvalidator):
+                return False
+
+        # Validation has passed
+        return True
     else:
         # Execute validator with value
         if validator(value) in (None, value):
