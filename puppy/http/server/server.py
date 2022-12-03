@@ -13,10 +13,10 @@ class HTTPClass(HTTP, HTTPSafeReceiverMixIn):
     pass
 
 
-class MultiHTTPWorker(Looper):
+class HTTPWorker(Looper):
     def __init__(self, server, handler, context=None):
         # Initialize the looper
-        super(MultiHTTPWorker, self).__init__()
+        super(HTTPWorker, self).__init__()
         
         # Set daemon to true
         self.daemon = True
@@ -69,10 +69,10 @@ class MultiHTTPWorker(Looper):
             self._socket.close()
 
 
-class MultiHTTPServer(Looper):
+class HTTPServer(Looper):
     def __init__(self, handler, http_port=80, https_port=443):
         # Initialize looper
-        super(MultiHTTPServer, self).__init__()
+        super(HTTPServer, self).__init__()
 
         # Set daemon to true
         self.daemon = True
@@ -101,7 +101,13 @@ class MultiHTTPServer(Looper):
 
         # Loop over readable sockets and create client threads
         for readable_socket in readable_sockets:
-            worker = MultiHTTPWorker(readable_socket, self._handler, self._context if readable_socket is self._https_socket else None)
+            # Create new worker
+            if readable_socket is self._https_socket:
+                worker = HTTPWorker(readable_socket, self._handler, self._context)
+            else:
+                worker = HTTPWorker(readable_socket, self._handler)
+            
+            # Start the new worker
             worker.start()
 
     def initialize(self):
