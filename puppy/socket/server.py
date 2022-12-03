@@ -72,7 +72,7 @@ class SocketWorker(Looper):
 
     def initialize(self):
         # Accept new connection
-        self._socket, address = self._server._socket.accept()
+        self._socket, address = self._server.accept()
 
         # Set new name
         self.name = "%s:%d" % address
