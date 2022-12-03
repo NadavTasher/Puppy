@@ -1,6 +1,8 @@
 from puppy.typing.check import validate  # NOQA
 from puppy.typing.validator import validator  # NOQA
 
+from puppy.utilities.string import charset  # NOQA
+
 
 @validator
 def Any(value):
@@ -75,3 +77,56 @@ def Tuple(value, *item_types):
     # Loop over values in tuple and validate them
     for item, item_type in zip(value, item_types):
         validate(item, item_type)
+
+
+@validator
+def Email(value):
+    # Make sure value is a string
+    validate(value, Text)
+
+    try:
+        # Split into two (exactly)
+        address, domain = value.split("@")
+
+        # Make sure address and domain are defined
+        assert address and domain
+
+        # Loop over all parts of address
+        for part in address.split("."):
+            # Make sure part is not empty
+            assert part
+
+            # Make sure part matches charset
+            assert charset(
+                part,
+                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+/=?^_`{|}~-",
+            )
+
+        # Loop over all parts of domain
+        for part in domain.split("."):
+            # Make sure part is not empty
+            assert part
+
+            # Make sure part matches charset
+            assert charset(
+                part, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
+            )
+    except:
+        raise TypeError("%r is not an email address" % value)
+
+
+@validator
+def Charset(value, chars):
+    # Make sure value is a string
+    validate(value, Text)
+
+    # Validate charset
+    if not charset(value, chars):
+        raise TypeError("%r has an invalid character" % value)
+
+
+# Initialize some charsets
+ID = Charset["abcdefghijklmnopqrstuvwxyz0123456789"]
+Binary = Charset["01"]
+Decimal = Charset["0123456789"]
+Hexadecimal = Charset["0123456789ABCDEFabcdef"]
