@@ -27,19 +27,19 @@ class SocketServer(Looper):
 
     def loop(self):
         # Check if socket is readable
-        readable_servers, _, _ = select.select([self._servers], [], [], SELECT_TIMEOUT)
+        readable_servers, _, _ = select.select(self._servers, [], [], SELECT_TIMEOUT)
 
         # Make sure socket is ready
         if not readable_servers:
             return
 
         # Create a new worker for each socket
-        for readable_socket in readable_servers:
+        for readable_server in readable_servers:
             # Get address of socket
-            address = readable_socket.getsockname()
+            address = readable_server.getsockname()
 
             # Create new worker
-            worker = self._addresses[address](self, readable_socket)
+            worker = self._addresses[address](self, readable_server)
             worker.start()
 
     def initialize(self):
