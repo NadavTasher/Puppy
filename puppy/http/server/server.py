@@ -33,7 +33,7 @@ class HTTPHandler(SocketWorker):
         request = self._interface.receive_request()
 
         # Handle client request
-        response = self._parent._handler(request)
+        response = self._parent.handler(request)
 
         # Transmit response to client
         self._interface.transmit_response(response)
@@ -123,7 +123,10 @@ class HTTPServer(SocketServer):
             {("0.0.0.0", http): HTTPWorker, ("0.0.0.0", https): HTTPSWorker}
         )
 
-        # Initialize ssl context
+        # Set the handler
+        self.handler = handler
+
+        # Initialize SSL context
         self.context = ssl.create_default_context()
         self.context.check_hostname = False
         self.context.verify_mode = ssl.CERT_OPTIONAL
