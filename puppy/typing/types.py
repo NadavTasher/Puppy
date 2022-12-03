@@ -34,6 +34,11 @@ def Optional(value, optional_type=Any):
 
 
 @validator
+def Text(value):
+    validate(value, (str, "".__class__))
+
+
+@validator
 def List(value, item_type=Any):
     # Make sure value is a list
     validate(value, list)

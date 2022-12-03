@@ -1,3 +1,6 @@
+from puppy.typing.check import check  # NOQA
+
+
 class validator(object):
     # Wrapper constructor
     def __init__(self, function):

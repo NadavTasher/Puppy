@@ -27,15 +27,16 @@ def Form(content):
     return MimeType(
         "&".join(
             [
-				# Key-value string
+                # Key-value string
                 "{0}={1}".format(urllib.quote(key), urllib.quote(value))
                 # For each item in the form
-				for key, value in content.items()
+                for key, value in content.items()
             ]
         ),
         "application/form-data",
     )
 
+
 def Multipart(strings, files):
-	# Validate content type
-	pass
+    # Validate content type
+    pass

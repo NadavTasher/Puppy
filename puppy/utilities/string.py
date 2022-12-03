@@ -1,4 +1,4 @@
-import random  # NOQA
+from random import randint  # NOQA
 
 
 def random(length=16, charset="abcdefghijklmnopqrstuvwxyz0123456789"):
@@ -7,7 +7,7 @@ def random(length=16, charset="abcdefghijklmnopqrstuvwxyz0123456789"):
 
     # Loop until length of output is reached
     while len(output) < length:
-        output += charset[random.randint(len(charset))]
+        output += charset[randint(0, len(charset) - 1)]
 
     # Return the output
     return output

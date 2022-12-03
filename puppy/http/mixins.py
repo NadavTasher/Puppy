@@ -39,7 +39,9 @@ class HTTPGzipReceiverMixIn(HTTPGzipMixIn, HTTPReceiver):
         assert content_encoding.lower() == GZIP
 
         # Decompress content as gzip
-        with gzip.GzipFile(fileobj=io.BytesIO(artifact.content), mode="rb") as decompressor:
+        with gzip.GzipFile(
+            fileobj=io.BytesIO(artifact.content), mode="rb"
+        ) as decompressor:
             artifact.content = decompressor.read()
 
         # Return the artifact

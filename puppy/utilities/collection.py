@@ -1,12 +1,15 @@
 def undup(iterable):
     # Create output list
-    output = list()
+    cache = list()
 
     # Loop over iterable
     for item in iterable:
-        # Add to output if not already there
-        if item not in output:
-            output.append(item)
+        # Make sure not duplicate
+        if item in cache:
+            continue
 
-    # Return output
-    return output
+        # Add the item to the cache
+        cache.append(item)
+
+        # Yield the item
+        yield item

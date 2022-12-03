@@ -53,6 +53,11 @@ def make(path):
         with open(os.path.join(subpath, "__init__.py"), "wb") as stub:
             pass
 
+        # Format all python files
+        for name in os.listdir(subpath):
+            if name.endswith(".py"):
+                os.system("black %s" % os.path.join(subpath, name))
+
 
 def main(path):
     clean(path)
