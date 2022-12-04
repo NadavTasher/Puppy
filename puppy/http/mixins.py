@@ -7,7 +7,6 @@ from puppy.http.constants import (
     GZIP,
     CLOSE,
     CONNECTION,
-    KEEP_ALIVE,
     ACCEPT_ENCODING,
     CONTENT_ENCODING,
 )  # NOQA
@@ -123,7 +122,7 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
             return
 
         # Fetch connection header
-        (connection,) = headers.pop(CONNECTION)
+        (connection,) = headers.fetch(CONNECTION)
 
         # Compare header to keepalive
         self.should_close = connection.lower() == CLOSE
@@ -132,7 +131,8 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
 class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmitter):
     def transmit_artifact(self, artifact):
         # Add connection state header
-        artifact.headers.update(CONNECTION, CLOSE if self.should_close else KEEP_ALIVE)
+	if self.should_close:
+	    artifact.headers.update(CONNECTION, CLOSE)
 
         # Write the artifact
         return super(HTTPConnectionStateTransmitterMixIn, self).transmit_artifact(
