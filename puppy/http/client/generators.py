@@ -25,14 +25,12 @@ def Form(content):
 
     # Return mime-typed encoded body
     return MimeType(
-        "&".join(
-            [
-                # Key-value string
-                "{0}={1}".format(urllib.quote(key), urllib.quote(value))
-                # For each item in the form
-                for key, value in content.items()
-            ]
-        ),
+        "&".join([
+            # Key-value string
+            "{0}={1}".format(urllib.quote(key), urllib.quote(value))
+            # For each item in the form
+            for key, value in content.items()
+        ]),
         "application/form-data",
     )
 

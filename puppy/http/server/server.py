@@ -35,6 +35,7 @@ class HTTPHandler(SocketWorker):
 
 
 class HTTPWorker(HTTPHandler):
+
     def initialize(self):
         # Initialize parent
         super(HTTPWorker, self).initialize()
@@ -44,23 +45,27 @@ class HTTPWorker(HTTPHandler):
 
 
 class HTTPSWorker(HTTPHandler):
+
     def initialize(self):
         # Initialize parent
         super(HTTPSWorker, self).initialize()
 
         # Wrap socket with SSL using parent's context
-        self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
+        self._socket = self._parent.context.wrap_socket(self._socket,
+                                                        server_side=True)
 
         # Initialize the interface
         self._interface = HTTPClass(self._socket)
 
 
 class HTTPServer(SocketServer):
+
     def __init__(self, handler, http=80, https=443):
         # Initialize looper
-        super(HTTPServer, self).__init__(
-            {("0.0.0.0", http): HTTPWorker, ("0.0.0.0", https): HTTPSWorker}
-        )
+        super(HTTPServer, self).__init__({
+            ("0.0.0.0", http): HTTPWorker,
+            ("0.0.0.0", https): HTTPSWorker
+        })
 
         # Set the handler
         self.handler = handler

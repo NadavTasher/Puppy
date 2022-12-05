@@ -72,7 +72,8 @@ def Tuple(value, *item_types):
 
     # Make sure value is of length
     if len(value) != len(item_types):
-        raise TypeError("%r is invalid (length != %d)" % (value, len(item_types)))
+        raise TypeError("%r is invalid (length != %d)" %
+                        (value, len(item_types)))
 
     # Loop over values in tuple and validate them
     for item, item_type in zip(value, item_types):
@@ -109,7 +110,8 @@ def Email(value):
 
             # Make sure part matches charset
             assert charset(
-                part, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
+                part,
+                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
             )
     except:
         raise TypeError("%r is not an email address" % value)

@@ -4,6 +4,7 @@ from puppy.thread.stoppable import Stoppable  # NOQA
 
 
 class Looper(Stoppable):
+
     def __init__(self):
         # Initialize thread class
         super(Looper, self).__init__()

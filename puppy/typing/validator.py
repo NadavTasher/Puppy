@@ -2,6 +2,7 @@ from puppy.typing.check import check  # NOQA
 
 
 class partial(object):
+
     def __init__(self, target, arguments):
         # Set internal function
         self._target = target

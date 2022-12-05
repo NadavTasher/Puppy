@@ -8,6 +8,7 @@ CHUNK = 4 * 1024
 
 
 class SocketWrapper(object):
+
     def __init__(self, wrapped):
         # Set internal parameter
         self._chunk = CHUNK
@@ -70,19 +71,19 @@ class SocketWrapper(object):
         # Send the buffer in chunks
         while buffer:
             # Send the current chunk
-            self._socket.sendall(buffer[: self._chunk])
+            self._socket.sendall(buffer[:self._chunk])
 
             # Remove the chunk from the buffer
-            buffer = buffer[self._chunk :]
+            buffer = buffer[self._chunk:]
 
     def send(self, buffer):
         # Send the buffer in chunks
         while buffer:
             # Send the current chunk
-            self._socket.send(buffer[: self._chunk])
+            self._socket.send(buffer[:self._chunk])
 
             # Remove the chunk from the buffer
-            buffer = buffer[self._chunk :]
+            buffer = buffer[self._chunk:]
 
     def abort(self):
         # Skip if already closed
@@ -90,9 +91,8 @@ class SocketWrapper(object):
             return
 
         # Set the linger socket option
-        self._socket.setsockopt(
-            socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0)
-        )
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
+                                struct.pack("ii", 1, 0))
 
         # Close the socket
         self.close()
@@ -110,6 +110,7 @@ class SocketWrapper(object):
 
 
 class SocketReader(SocketWrapper):
+
     def readline(self):
         # Create a reading buffer
         buffer = bytes()
@@ -119,7 +120,7 @@ class SocketReader(SocketWrapper):
             buffer += self.recvexact(1)
 
         # Strip the buffer of the separator
-        return buffer[: -len(self._separator)]
+        return buffer[:-len(self._separator)]
 
     def readlines(self):
         # Read first line
@@ -135,6 +136,7 @@ class SocketReader(SocketWrapper):
 
 
 class SocketWriter(SocketWrapper):
+
     def writeline(self, line=None):
         # Write line if exists
         if line:

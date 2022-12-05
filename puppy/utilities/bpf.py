@@ -1,4 +1,5 @@
 class BPF(str):
+
     def __or__(self, other):
         assert self and other
         return BPF("(%s) or (%s)" % (self, other))

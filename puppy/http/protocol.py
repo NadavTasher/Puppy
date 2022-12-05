@@ -12,6 +12,7 @@ from puppy.http.constants import (
 
 
 class HTTPReader(SocketReader):
+
     def receive_artifact(self):
         # Receive all artifact components
         header = self.readline()
@@ -64,7 +65,7 @@ class HTTPReader(SocketReader):
         # Make sure content-type is defined
         if not headers.has(CONTENT_TYPE):
             return
-        
+
         # Make sure connection is defined
         if not headers.has(CONNECTION):
             return
@@ -73,7 +74,7 @@ class HTTPReader(SocketReader):
         for connection in headers.fetch(CONNECTION):
             if connection.lower() != CLOSE:
                 return
-        
+
         # Receive content until socket is closed
         return self.receive_content_by_stream()
 
@@ -105,6 +106,7 @@ class HTTPReader(SocketReader):
 
 
 class HTTPWriter(SocketWriter):
+
     def transmit_artifact(self, artifact):
         # Transmit all parts
         self.writeline(artifact.header)
@@ -137,6 +139,7 @@ class HTTPWriter(SocketWriter):
 
 
 class HTTPReceiver(HTTPReader):
+
     def receive_request(self):
         # Receive artifact from parent
         artifact = self.receive_artifact()
@@ -162,6 +165,7 @@ class HTTPReceiver(HTTPReader):
 
 
 class HTTPTransmitter(HTTPWriter):
+
     def transmit_request(self, request):
         return self.transmit_artifact(request)
 

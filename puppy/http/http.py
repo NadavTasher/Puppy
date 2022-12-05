@@ -8,10 +8,10 @@ from puppy.http.mixins import (
 
 
 class HTTP(
-    HTTPGzipReceiverMixIn,
-    HTTPGzipTransmitterMixIn,
-    HTTPConnectionStateReceiverMixIn,
-    HTTPConnectionStateTransmitterMixIn,
-    HTTPHostTransmitterMixIn,
+        HTTPGzipReceiverMixIn,
+        HTTPGzipTransmitterMixIn,
+        HTTPConnectionStateReceiverMixIn,
+        HTTPConnectionStateTransmitterMixIn,
+        HTTPHostTransmitterMixIn,
 ):
     pass

@@ -3,12 +3,12 @@ import select  # NOQA
 
 from puppy.thread.looper import Looper  # NOQA
 
-
 SELECT_TIMEOUT = 0.5
 SOCKET_TIMEOUT = 10
 
 
 class SocketServer(Looper):
+
     def __init__(self, addresses):
         # Initialize parent
         super(SocketServer, self).__init__()
@@ -27,7 +27,8 @@ class SocketServer(Looper):
 
     def loop(self):
         # Check if socket is readable
-        readable_servers, _, _ = select.select(self._servers, [], [], SELECT_TIMEOUT)
+        readable_servers, _, _ = select.select(self._servers, [], [],
+                                               SELECT_TIMEOUT)
 
         # Make sure socket is ready
         if not readable_servers:
@@ -58,6 +59,7 @@ class SocketServer(Looper):
 
 
 class SocketWorker(Looper):
+
     def __init__(self, parent, server):
         # Initialize parent
         super(SocketWorker, self).__init__()

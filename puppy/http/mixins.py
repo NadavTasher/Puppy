@@ -20,6 +20,7 @@ class HTTPGzipMixIn(SocketWrapper):
 
 
 class HTTPGzipReceiverMixIn(HTTPGzipMixIn, HTTPReceiver):
+
     def receive_artifact(self):
         # Read artifact from parent
         artifact = super(HTTPGzipReceiverMixIn, self).receive_artifact()
@@ -38,9 +39,8 @@ class HTTPGzipReceiverMixIn(HTTPGzipMixIn, HTTPReceiver):
         assert content_encoding.lower() == GZIP
 
         # Decompress content as gzip
-        with gzip.GzipFile(
-            fileobj=io.BytesIO(artifact.content), mode="rb"
-        ) as decompressor:
+        with gzip.GzipFile(fileobj=io.BytesIO(artifact.content),
+                           mode="rb") as decompressor:
             artifact.content = decompressor.read()
 
         # Return the artifact
@@ -63,6 +63,7 @@ class HTTPGzipReceiverMixIn(HTTPGzipMixIn, HTTPReceiver):
 
 
 class HTTPGzipTransmitterMixIn(HTTPGzipMixIn, HTTPTransmitter):
+
     def transmit_request(self, request):
         # Add accept-encoding header
         request.headers.update(ACCEPT_ENCODING, GZIP)
@@ -94,9 +95,11 @@ class HTTPConnectionStateMixIn(SocketWrapper):
 
 
 class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
+
     def receive_artifact(self):
         # Receive artifact from headers
-        artifact = super(HTTPConnectionStateReceiverMixIn, self).receive_artifact()
+        artifact = super(HTTPConnectionStateReceiverMixIn,
+                         self).receive_artifact()
 
         # Update connection state
         self._update_connection_state(artifact.headers)
@@ -107,7 +110,8 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
     def receive_response(self):
         # Try-finally
         try:
-            return super(HTTPConnectionStateReceiverMixIn, self).receive_response()
+            return super(HTTPConnectionStateReceiverMixIn,
+                         self).receive_response()
         finally:
             # Close the socket if needed
             if self.should_close:
@@ -128,23 +132,23 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
         self.should_close = connection.lower() == CLOSE
 
 
-class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmitter):
+class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn,
+                                          HTTPTransmitter):
+
     def transmit_artifact(self, artifact):
         # Add connection state header
         if self.should_close:
             artifact.headers.update(CONNECTION, CLOSE)
 
         # Write the artifact
-        return super(HTTPConnectionStateTransmitterMixIn, self).transmit_artifact(
-            artifact
-        )
+        return super(HTTPConnectionStateTransmitterMixIn,
+                     self).transmit_artifact(artifact)
 
     def transmit_response(self, response):
         # Try-finally
         try:
-            return super(HTTPConnectionStateTransmitterMixIn, self).transmit_response(
-                response
-            )
+            return super(HTTPConnectionStateTransmitterMixIn,
+                         self).transmit_response(response)
         finally:
             # Close the socket if needed
             if self.should_close:
@@ -216,4 +220,4 @@ class HTTPSafeReceiverMixIn(HTTPReceiver):
             buffer += self.recvexact(1)
 
         # Return the buffer without the CRLF
-        return buffer[: -len(self._separator)]
+        return buffer[:-len(self._separator)]

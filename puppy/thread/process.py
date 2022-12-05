@@ -11,6 +11,7 @@ from puppy.thread.looper import Looper
 
 
 class Process(Looper):
+
     def __init__(self, command, daemonize=False):
         # Set internal consts
         self._command = command

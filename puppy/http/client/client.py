@@ -16,6 +16,7 @@ from puppy.http.client.constants import (
 
 
 class HTTPClient(object):
+
     def __init__(self, implementation=HTTP):
         # Client variables
         self.implementation = implementation
@@ -31,14 +32,12 @@ class HTTPClient(object):
         if self.cookies:
             request.headers.update(
                 COOKIE,
-                "; ".join(
-                    [
-                        # Format as name=value
-                        "%s=%s" % (urllib.quote(name), urllib.quote(value))
-                        # For each cookie in the jar
-                        for name, value in self.cookies.items()
-                    ]
-                ),
+                "; ".join([
+                    # Format as name=value
+                    "%s=%s" % (urllib.quote(name), urllib.quote(value))
+                    # For each cookie in the jar
+                    for name, value in self.cookies.items()
+                ]),
             )
 
         # Return the request

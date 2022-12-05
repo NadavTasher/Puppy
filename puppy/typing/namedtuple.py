@@ -12,6 +12,7 @@ def NamedTuple(name, fields):
 
     # Create class that will validate the types
     class namedtuple(classtype):
+
         def __new__(cls, *args, **kwargs):
             # Initialize namedtuple with values
             self = classtype.__new__(cls, *args, **kwargs)

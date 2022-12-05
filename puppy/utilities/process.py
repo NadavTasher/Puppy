@@ -13,14 +13,15 @@ def run(command, shell="/bin/sh"):
     # Check if the shell exists
     if os.path.exists(shell):
         # Create a process with proper shell
-        return subprocess.Popen(
-            [shell, "-c", command], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
+        return subprocess.Popen([shell, "-c", command],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
 
     # Create a process with default shell
-    return subprocess.Popen(
-        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-    )
+    return subprocess.Popen(command,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            shell=True)
 
 
 def timeout(process, seconds=None):

@@ -4,6 +4,7 @@ from puppy.http.constants import VERSION  # NOQA
 
 
 class Artifact(object):
+
     def __init__(self, headers=None, content=None):
         # Set the internal contents
         self.headers = headers or Headers()
@@ -14,10 +15,12 @@ class Artifact(object):
         pass
 
     def __repr__(self):
-        return "%s(%r, %r)" % (self.__class__.__name__, self.headers, self.content)
+        return "%s(%r, %r)" % (self.__class__.__name__, self.headers,
+                               self.content)
 
 
 class Received(Artifact):
+
     def __init__(self, line, headers=None, content=None):
         # Set the internal line
         self.line = line
@@ -39,6 +42,7 @@ class Received(Artifact):
 
 
 class Request(Artifact):
+
     def __init__(self, method, location, headers=None, content=None):
         # Set internal variables
         self.method = method
@@ -49,7 +53,8 @@ class Request(Artifact):
 
     @property
     def header(self):
-        return b"%s %s HTTP/%.1f" % (self.method.upper(), self.location, VERSION)
+        return b"%s %s HTTP/%.1f" % (self.method.upper(), self.location,
+                                     VERSION)
 
     def __repr__(self):
         return "%s(%r, %r, %r, %r)" % (
@@ -62,6 +67,7 @@ class Request(Artifact):
 
 
 class Response(Artifact):
+
     def __init__(self, status, message, headers=None, content=None):
         # Set internal variables
         self.status = status
@@ -85,6 +91,7 @@ class Response(Artifact):
 
 
 class Headers(object):
+
     def __init__(self, headers=[]):
         # Initialize order list
         self.store = collections.OrderedDict()

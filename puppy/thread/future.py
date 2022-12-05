@@ -4,6 +4,7 @@ import threading  # NOQA
 
 
 class Future(threading.Thread):
+
     def __init__(self, function, timeout=None):
         # Initialize parent
         super(Future, self).__init__()

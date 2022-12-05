@@ -7,6 +7,7 @@ from puppy.thread.stoppable import Stoppable  # NOQA
 
 
 def state(function):
+
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
         try:
@@ -24,6 +25,7 @@ def state(function):
 
 
 class Machine(Stoppable):
+
     def __init__(self):
         # Initialize parent
         super(Machine, self).__init__()
@@ -66,7 +68,8 @@ class Machine(Stoppable):
             if not result:
                 return self.next(
                     self.exit_state,
-                    reason="State %s did not return a move" % self._state.__name__,
+                    reason="State %s did not return a move" %
+                    self._state.__name__,
                 )
 
             # Check if the output is a state
@@ -74,9 +77,9 @@ class Machine(Stoppable):
                 return self.next(result)
 
             # Check the length of the result
-            assert len(result) in range(2, 4), (
-                "State %s returned an invalid move" % self._state.__name__
-            )
+            assert len(result) in range(
+                2,
+                4), ("State %s returned an invalid move" % self._state.__name__)
 
             # Add arguments accordingly
             if len(result) == 2:
