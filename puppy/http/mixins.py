@@ -131,8 +131,8 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
 class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmitter):
     def transmit_artifact(self, artifact):
         # Add connection state header
-	if self.should_close:
-	    artifact.headers.update(CONNECTION, CLOSE)
+        if self.should_close:
+            artifact.headers.update(CONNECTION, CLOSE)
 
         # Write the artifact
         return super(HTTPConnectionStateTransmitterMixIn, self).transmit_artifact(

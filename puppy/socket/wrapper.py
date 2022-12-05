@@ -67,12 +67,22 @@ class SocketWrapper(object):
         return self._socket.recv(limit)
 
     def sendall(self, buffer):
-        # Send the buffer
-        self._socket.sendall(buffer)
+        # Send the buffer in chunks
+        while buffer:
+            # Send the current chunk
+            self._socket.sendall(buffer[: self._chunk])
+
+            # Remove the chunk from the buffer
+            buffer = buffer[self._chunk :]
 
     def send(self, buffer):
-        # Send the buffer
-        self._socket.send(buffer)
+        # Send the buffer in chunks
+        while buffer:
+            # Send the current chunk
+            self._socket.send(buffer[: self._chunk])
+
+            # Remove the chunk from the buffer
+            buffer = buffer[self._chunk :]
 
     def abort(self):
         # Skip if already closed

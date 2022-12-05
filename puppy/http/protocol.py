@@ -48,7 +48,7 @@ class HTTPReader(SocketReader):
             (content_length,) = headers.pop(CONTENT_LENGTH)
 
             # Read content by known length
-            return self.receive_content_by_length(int(content_length.decode()))
+            return self.receive_content_by_length(int(content_length))
 
         # If encoding is defined, fetch by chunks
         if headers.has(TRANSFER_ENCODING):
@@ -56,14 +56,26 @@ class HTTPReader(SocketReader):
             (transfer_encoding,) = headers.pop(TRANSFER_ENCODING)
 
             # Make sure the encoding is supported
-            assert transfer_encoding.decode().lower() == CHUNKED
+            assert transfer_encoding.lower() == CHUNKED
 
             # Receive by chunks
             return self.receive_content_by_chunks()
 
-        # If a content type is defined, receive by stream
-        if headers.has(CONTENT_TYPE):
-            return self.receive_content_by_stream()
+        # Make sure content-type is defined
+        if not headers.has(CONTENT_TYPE):
+            return
+        
+        # Make sure connection is defined
+        if not headers.has(CONNECTION):
+            return
+
+        # Make sure connection will close
+        for connection in headers.fetch(CONNECTION):
+            if connection.lower() != CLOSE:
+                return
+        
+        # Receive content until socket is closed
+        return self.receive_content_by_stream()
 
     def receive_content_by_length(self, length):
         return self.recvexact(length)
