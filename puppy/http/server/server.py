@@ -2,7 +2,6 @@ import ssl  # NOQA
 
 from puppy.http.http import HTTP  # NOQA
 from puppy.http.mixins import HTTPSafeReceiverMixIn  # NOQA
-from puppy.http.server.utilities import supress_certificate_errors  # NOQA
 
 from puppy.socket.server import SocketServer, SocketWorker  # NOQA
 
@@ -52,8 +51,7 @@ class HTTPSWorker(HTTPHandler):
         super(HTTPSWorker, self).initialize()
 
         # Wrap socket with SSL using parent's context
-        with supress_certificate_errors():
-            self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
+        self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
 
         # Initialize the interface
         self._interface = HTTPClass(self._socket)

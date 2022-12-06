@@ -1,4 +1,5 @@
 import ssl  # NOQA
+import socket  # NOQA
 import contextlib  # NOQA
 
 SUPPRESSED_MESSAGES = ["ALERT_CERTIFICATE_UNKNOWN"]
