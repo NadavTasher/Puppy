@@ -11,5 +11,5 @@ def supress_certificate_errors():
         yield
     except ssl.SSLError as exception:
         # Check if message should be ignored
-        if not any(message in exception.message for message in SUPPRESSED_MESSAGES):
+        if not any(message in str(exception) for message in SUPPRESSED_MESSAGES):
             raise
