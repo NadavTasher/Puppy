@@ -29,11 +29,7 @@ class Authority(object):
         # Set the secret
         self._secret = secret
 
-    def issue(self,
-              name,
-              contents=None,
-              permissions=None,
-              validity=60 * 60 * 24 * 365):
+    def issue(self, name, contents=None, permissions=None, validity=60 * 60 * 24 * 365):
         # Make sure all parameters are initialized
         contents = contents or dict()
         permissions = permissions or list()
@@ -42,11 +38,9 @@ class Authority(object):
         timestamp = int(time.time())
 
         # Create token object and string
-        token_object = Token(random(10), name, contents, timestamp + validity,
-                             timestamp, permissions)
+        token_object = Token(random(10), name, contents, timestamp + validity, timestamp, permissions)
         token_string = json.dumps(token_object).encode()
-        token_hmac = hmac.new(self._secret, token_string,
-                              hashlib.sha256).digest()
+        token_hmac = hmac.new(self._secret, token_string, hashlib.sha256).digest()
 
         # Calculate token HMAC and create buffer
         token_buffer = token_string + token_hmac
@@ -62,22 +56,18 @@ class Authority(object):
         token_string, token_hmac = token_buffer[:-32], token_buffer[-32:]
 
         # Validate HMAC of buffer
-        assert (hmac.new(
-            self._secret, token_string,
-            hashlib.sha256).digest() == token_hmac), "Token HMAC is invalid"
+        assert (hmac.new(self._secret, token_string, hashlib.sha256).digest() == token_hmac), "Token HMAC is invalid"
 
         # Decode string to token object
         token_object = Token(*json.loads(token_string.decode()))
 
         # Validate the expiration dates
-        assert token_object.timestamp < time.time(
-        ), "Token timestamp is invalid"
+        assert token_object.timestamp < time.time(), "Token timestamp is invalid"
         assert token_object.validity > time.time(), "Token validity is expired"
 
         # Validate permissions
         for permission in permissions:
-            assert permission in token_object.permissions, (
-                "Token is missing the %r permission" % permission)
+            assert permission in token_object.permissions, ("Token is missing the %r permission" % permission)
 
         # Return the created object
         return token_object

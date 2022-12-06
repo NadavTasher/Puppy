@@ -15,8 +15,7 @@ class Artifact(object):
         pass
 
     def __repr__(self):
-        return "%s(%r, %r)" % (self.__class__.__name__, self.headers,
-                               self.content)
+        return "%s(%r, %r)" % (self.__class__.__name__, self.headers, self.content)
 
 
 class Received(Artifact):
@@ -53,8 +52,7 @@ class Request(Artifact):
 
     @property
     def header(self):
-        return b"%s %s HTTP/%.1f" % (self.method.upper(), self.location,
-                                     VERSION)
+        return b"%s %s HTTP/%.1f" % (self.method.upper(), self.location, VERSION)
 
     def __repr__(self):
         return "%s(%r, %r, %r, %r)" % (

@@ -52,8 +52,7 @@ class HTTPRouter(object):
             # Loop over paths and load them as routes
             for subname in os.listdir(path):
                 # Add static file
-                self.static(os.path.join(path, subname),
-                            os.path.join(name, subname))
+                self.static(os.path.join(path, subname), os.path.join(name, subname))
 
                 # If the subname matches an index, add it too
                 if subname in indexes:

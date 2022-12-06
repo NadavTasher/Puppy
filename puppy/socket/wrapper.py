@@ -91,8 +91,7 @@ class SocketWrapper(object):
             return
 
         # Set the linger socket option
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER,
-                                struct.pack("ii", 1, 0))
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
 
         # Close the socket
         self.close()

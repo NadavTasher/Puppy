@@ -27,8 +27,7 @@ class SocketServer(Looper):
 
     def loop(self):
         # Check if socket is readable
-        readable_servers, _, _ = select.select(self._servers, [], [],
-                                               SELECT_TIMEOUT)
+        readable_servers, _, _ = select.select(self._servers, [], [], SELECT_TIMEOUT)
 
         # Make sure socket is ready
         if not readable_servers:
