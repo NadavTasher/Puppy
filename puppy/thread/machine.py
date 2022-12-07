@@ -42,12 +42,11 @@ class Machine(Stoppable):
         if reason:
             log = "%s (%s)" % (log, reason)
 
-        # Append exception if needed
+        # Print with exception if needed
         if exception:
-            log = "%s [%s]" % (log, exception)
-
-        # Print the move
-        logging.debug(log)
+            logging.debug(log, exc_info=exception)
+        else:
+            logging.debug(log)
 
     def next(self, state, reason=None, exception=None):
         # Print the state switch

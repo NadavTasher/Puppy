@@ -1,7 +1,12 @@
 import ssl  # NOQA
+import socket  # NOQA
 
 from puppy.http.http import HTTP  # NOQA
 from puppy.http.mixins import HTTPSafeReceiverMixIn  # NOQA
+from puppy.http.server.utilities import (
+    supress_certificate_errors,
+    supress_socket_errors,
+)  # NOQA
 
 from puppy.socket.server import SocketServer, SocketWorker  # NOQA
 
@@ -13,6 +18,11 @@ class HTTPClass(HTTP, HTTPSafeReceiverMixIn):
 class HTTPHandler(SocketWorker):
     # Internal HTTP interface
     _interface = None
+
+    def run(self):
+        # Run loop with exception handlers
+        with supress_socket_errors():
+            super(HTTPHandler, self).run()
 
     def loop(self):
         # Check if interface was closed
@@ -45,6 +55,11 @@ class HTTPWorker(HTTPHandler):
 
 
 class HTTPSWorker(HTTPHandler):
+
+    def run(self):
+        # Run loop with exception handlers
+        with supress_certificate_errors():
+            super(HTTPSWorker, self).run()
 
     def initialize(self):
         # Initialize parent

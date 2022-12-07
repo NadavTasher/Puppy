@@ -6,6 +6,15 @@ SUPPRESSED_MESSAGES = ["ALERT_CERTIFICATE_UNKNOWN"]
 
 
 @contextlib.contextmanager
+def supress_socket_errors():
+    try:
+        # Yield for execution
+        yield
+    except socket.error as exception:
+        pass
+
+
+@contextlib.contextmanager
 def supress_certificate_errors():
     try:
         # Yield for execution

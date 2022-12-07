@@ -159,8 +159,9 @@ class HTTPHostTransmitterMixIn(HTTPTransmitter):
 
         # Make sure host header is defined
         if not host:
-            # Get IP from peername
+            # Get IP from peername and encode
             host, _ = self._socket.getpeername()
+            host = host.encode()
 
         # Update the request with the appropriate header
         request.headers.update(HOST, host)
@@ -174,6 +175,13 @@ class HTTPSafeReceiverMixIn(HTTPReceiver):
     maximum_readline = 4 * 1024
     maximum_recvall = 4 * 1024 * 1024
     maximum_recvexact = 64 * 1024 * 1024
+
+    def __init__(self, wrapped, timeout=60):
+        # Initialize parent
+        super(HTTPSafeReceiverMixIn, self).__init__(wrapped)
+
+        # Set a socket timeout
+        self._socket.settimeout(timeout)
 
     def recvexact(self, length=0):
         # Make sure the length is not larger then maxlength
