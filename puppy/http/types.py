@@ -138,7 +138,7 @@ class Headers(object):
 
     def append(self, name, *values):
         # Update store values
-        self.set(name, self.get(name) + values)
+        self.set(name, self.get(name) + list(values))
 
     def remove(self, name):
         # Make sure the header exists
