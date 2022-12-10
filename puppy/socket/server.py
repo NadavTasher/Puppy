@@ -1,7 +1,7 @@
-import socket  # NOQA
-import select  # NOQA
+import socket
+import select
 
-from puppy.thread.looper import Looper  # NOQA
+from puppy.thread.looper import Looper
 
 SELECT_TIMEOUT = 0.5
 SOCKET_TIMEOUT = 10

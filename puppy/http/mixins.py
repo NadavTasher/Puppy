@@ -1,7 +1,7 @@
-import io  # NOQA
-import gzip  # NOQA
+import io
+import gzip
 
-from puppy.http.protocol import HTTPReceiver, HTTPTransmitter  # NOQA
+from puppy.http.protocol import HTTPReceiver, HTTPTransmitter
 from puppy.http.constants import (
     HOST,
     GZIP,
@@ -9,9 +9,9 @@ from puppy.http.constants import (
     CONNECTION,
     ACCEPT_ENCODING,
     CONTENT_ENCODING,
-)  # NOQA
+)
 
-from puppy.socket.wrapper import SocketWrapper, CRLF  # NOQA
+from puppy.socket.wrapper import SocketWrapper, CRLF
 
 
 class HTTPGzipMixIn(SocketWrapper):
@@ -54,7 +54,7 @@ class HTTPGzipReceiverMixIn(HTTPGzipMixIn, HTTPReceiver):
             return
 
         # Split the header value and loop
-        for accepted_encodings in headers.fetch(ACCEPT_ENCODING):
+        for accepted_encodings in headers.get(ACCEPT_ENCODING):
             for encoding in accepted_encodings.split(b","):
                 if encoding.strip().lower() == GZIP:
                     # Compression is supported!
@@ -65,7 +65,7 @@ class HTTPGzipTransmitterMixIn(HTTPGzipMixIn, HTTPTransmitter):
 
     def transmit_request(self, request):
         # Add accept-encoding header
-        request.headers.update(ACCEPT_ENCODING, GZIP)
+        request.headers.set(ACCEPT_ENCODING, GZIP)
 
         # Transmit modified request
         return super(HTTPGzipTransmitterMixIn, self).transmit_request(request)
@@ -123,7 +123,7 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
             return
 
         # Fetch connection header
-        (connection,) = headers.fetch(CONNECTION)
+        (connection,) = headers.get(CONNECTION)
 
         # Compare header to keepalive
         self.should_close = connection.lower() == CLOSE
@@ -134,7 +134,7 @@ class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmit
     def transmit_artifact(self, artifact):
         # Add connection state header
         if self.should_close:
-            artifact.headers.update(CONNECTION, CLOSE)
+            artifact.headers.set(CONNECTION, CLOSE)
 
         # Write the artifact
         return super(HTTPConnectionStateTransmitterMixIn, self).transmit_artifact(artifact)
@@ -164,7 +164,7 @@ class HTTPHostTransmitterMixIn(HTTPTransmitter):
             host = host.encode()
 
         # Update the request with the appropriate header
-        request.headers.update(HOST, host)
+        request.headers.set(HOST, host)
 
         # Transmit the request
         return super(HTTPHostTransmitterMixIn, self).transmit_request(request)

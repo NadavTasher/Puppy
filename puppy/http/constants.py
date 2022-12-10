@@ -7,6 +7,8 @@ POST = b"POST"
 
 # Header constants
 HOST = b"Host"
+COOKIE = b"Cookie"
+SET_COOKIE = b"Set-Cookie"
 CONNECTION = b"Connection"
 CONTENT_TYPE = b"Content-Type"
 CONTENT_LENGTH = b"Content-Length"

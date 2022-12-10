@@ -1,9 +1,9 @@
-import sys  # NOQA
-import logging  # NOQA
-import functools  # NOQA
-import threading  # NOQA
+import sys
+import logging
+import functools
+import threading
 
-from puppy.thread.stoppable import Stoppable  # NOQA
+from puppy.thread.stoppable import Stoppable
 
 
 def state(function):

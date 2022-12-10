@@ -1,14 +1,31 @@
-import ssl  # NOQA
-import socket  # NOQA
+import ssl
+import socket
+import contextlib
 
-from puppy.http.http import HTTP  # NOQA
-from puppy.http.mixins import HTTPSafeReceiverMixIn  # NOQA
-from puppy.http.server.utilities import (
-    supress_certificate_errors,
-    supress_socket_errors,
-)  # NOQA
+from puppy.http.http import HTTP
+from puppy.http.mixins import HTTPSafeReceiverMixIn
 
-from puppy.socket.server import SocketServer, SocketWorker  # NOQA
+from puppy.socket.server import SocketServer, SocketWorker
+
+
+@contextlib.contextmanager
+def supress_socket_errors():
+    try:
+        # Yield for execution
+        yield
+    except socket.error as exception:
+        pass
+
+
+@contextlib.contextmanager
+def supress_certificate_errors():
+    try:
+        # Yield for execution
+        yield
+    except ssl.SSLError as exception:
+        # Check if message should be ignored
+        if not any(message in str(exception) for message in ["ALERT_CERTIFICATE_UNKNOWN"]):
+            raise
 
 
 class HTTPClass(HTTP, HTTPSafeReceiverMixIn):

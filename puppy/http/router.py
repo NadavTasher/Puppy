@@ -1,9 +1,9 @@
-import os  # NOQA
-import logging  # NOQA
+import os
+import logging
 
-from puppy.http.types import Response  # NOQA
-from puppy.http.utilities import pathsplit  # NOQA
-from puppy.http.constants import GET, POST  # NOQA
+from puppy.http.url import pathsplit
+from puppy.http.types import Response
+from puppy.http.constants import GET, POST
 
 
 class HTTPRouter(object):

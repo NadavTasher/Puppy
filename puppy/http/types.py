@@ -1,6 +1,6 @@
-import collections  # NOQA
+import collections
 
-from puppy.http.constants import VERSION  # NOQA
+from puppy.http.constants import VERSION
 
 
 class Artifact(object):
@@ -112,12 +112,12 @@ class Headers(object):
     def pop(self, name):
         try:
             # Fetch all values
-            return self.fetch(name)
+            return self.get(name)
         finally:
             # Remove the value
             self.remove(name)
 
-    def fetch(self, name):
+    def get(self, name):
         # Make sure header exists
         if not self.has(name):
             return list()
@@ -128,25 +128,17 @@ class Headers(object):
         # Return the values
         return values
 
-    def append(self, name, value):
+    def set(self, name, *values):
         # Create new entry if does not exist
         if not self.has(name):
             self.new(name)
-
-        # Fetch values and append to them
-        values = self.fetch(name)
-        values.append(value)
 
         # Update store values
         self.store[bytes(name).lower()] = (bytes(name), values)
 
-    def update(self, name, value):
-        # Create new entry if does not exist
-        if not self.has(name):
-            self.new(name)
-
+    def append(self, name, *values):
         # Update store values
-        self.store[bytes(name).lower()] = (bytes(name), [value])
+        self.set(name, self.get(name) + values)
 
     def remove(self, name):
         # Make sure the header exists

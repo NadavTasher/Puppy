@@ -1,4 +1,4 @@
-from puppy.typing.check import check  # NOQA
+from puppy.typing.check import check
 
 
 class partial(object):

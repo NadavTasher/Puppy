@@ -1,13 +1,13 @@
-import time  # NOQA
-import json  # NOQA
-import hmac  # NOQA
-import base64  # NOQA
-import hashlib  # NOQA
+import time
+import json
+import hmac
+import base64
+import hashlib
 
-from puppy.utilities.string import random  # NOQA
+from puppy.utilities.string import random
 
-from puppy.typing.namedtuple import NamedTuple  # NOQA
-from puppy.typing.types import Any, Text, List, Dict, Optional  # NOQA
+from puppy.typing.namedtuple import NamedTuple
+from puppy.typing.types import Any, Text, List, Dict, Optional
 
 # Class to store tokens
 Token = NamedTuple(
@@ -37,8 +37,11 @@ class Authority(object):
         # Calculate token validity
         timestamp = int(time.time())
 
+        # Create identifier
+        identifier = binascii.b2a_hex(os.urandom(10)).decode()
+
         # Create token object and string
-        token_object = Token(random(10), name, contents, timestamp + validity, timestamp, permissions)
+        token_object = Token(identifier, name, contents, timestamp + validity, timestamp, permissions)
         token_string = json.dumps(token_object).encode()
         token_hmac = hmac.new(self._secret, token_string, hashlib.sha256).digest()
 

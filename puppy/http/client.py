@@ -1,18 +1,16 @@
-import ssl  # NOQA
-import socket  # NOQA
-import urllib  # NOQA
+import ssl
+import socket
+import urllib
 
-from puppy.http.http import HTTP  # NOQA
-from puppy.http.types import Request, Headers  # NOQA
-from puppy.http.utilities import urlsplit  # NOQA
-from puppy.http.constants import GET, POST  # NOQA
-from puppy.http.client.constants import (
-    COOKIE,
-    SET_COOKIE,
-    SCHEMA_HTTP,
-    SCHEMA_HTTPS,
-    SCHEMA_MAPPING,
-)  # NOQA
+from puppy.http.url import urlsplit
+from puppy.http.http import HTTP
+from puppy.http.types import Request, Headers
+from puppy.http.constants import GET, POST, COOKIE, SET_COOKIE
+
+# Schema constants
+SCHEMA_HTTP = b"http"
+SCHEMA_HTTPS = b"https"
+SCHEMA_MAPPING = {SCHEMA_HTTP: 80, SCHEMA_HTTPS: 443}
 
 
 class HTTPClient(object):
@@ -30,11 +28,11 @@ class HTTPClient(object):
     def _update_request(self, request):
         # Set cookies header
         if self.cookies:
-            request.headers.update(
+            request.headers.set(
                 COOKIE,
-                "; ".join([
+                b"; ".join([
                     # Format as name=value
-                    "%s=%s" % (urllib.quote(name), urllib.quote(value))
+                    b"%s=%s" % (urllib.quote(name), urllib.quote(value))
                     # For each cookie in the jar
                     for name, value in self.cookies.items()
                 ]),

@@ -1,6 +1,6 @@
-import threading  # NOQA
+import threading
 
-from puppy.thread.stoppable import Stoppable  # NOQA
+from puppy.thread.stoppable import Stoppable
 
 
 class Looper(Stoppable):

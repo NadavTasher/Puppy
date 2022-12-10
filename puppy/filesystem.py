@@ -1,18 +1,6 @@
-import os  # NOQA
-import tempfile  # NOQA
-import contextlib  # NOQA
-
-
-@contextlib.contextmanager
-def mktemp(*args, **kwargs):
-    # Create temporary path
-    path = tempfile.mktemp(*args, **kwargs)
-
-    # Try yielding the path
-    try:
-        yield path
-    finally:
-        remove(path)
+import os  
+import tempfile  
+import contextlib  
 
 
 def remove(path):
@@ -31,3 +19,14 @@ def remove(path):
 
         # Remove empty directory
         os.rmdir(path)
+
+@contextlib.contextmanager
+def temporary():
+    # Create temporary path
+    path = tempfile.mktemp()
+
+    # Try yielding the path
+    try:
+        yield path
+    finally:
+        remove(path)

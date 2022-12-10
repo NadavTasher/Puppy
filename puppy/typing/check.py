@@ -1,4 +1,4 @@
-import functools  # NOQA
+import functools
 
 
 def check(value, validator):

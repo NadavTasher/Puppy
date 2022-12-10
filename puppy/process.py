@@ -1,12 +1,12 @@
-import os  # NOQA
-import json  # NOQA
-import time  # NOQA
-import logging  # NOQA
-import threading  # NOQA
-import functools  # NOQA
-import subprocess  # NOQA
+import os  
+import json  
+import time  
+import logging  
+import threading  
+import functools  
+import subprocess  
 
-from puppy.thread.future import future  # NOQA
+from puppy.thread.future import future  
 
 
 def run(command, shell="/bin/sh"):

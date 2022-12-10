@@ -1,4 +1,4 @@
-import threading  # NOQA
+import threading
 
 
 class Stoppable(threading.Thread, object):

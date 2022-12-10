@@ -1,6 +1,6 @@
-import struct  # NOQA
-import socket  # NOQA
-import select  # NOQA
+import struct
+import socket
+import select
 
 # Defaults for wrapper
 CRLF = b"\r\n"

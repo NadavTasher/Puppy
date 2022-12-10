@@ -71,7 +71,7 @@ class HTTPReader(SocketReader):
             return
 
         # Make sure connection will close
-        for connection in headers.fetch(CONNECTION):
+        for connection in headers.get(CONNECTION):
             if connection.lower() != CLOSE:
                 return
 

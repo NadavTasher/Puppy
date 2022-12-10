@@ -1,7 +1,7 @@
-from puppy.typing.check import validate  # NOQA
-from puppy.typing.validator import validator  # NOQA
+from puppy.typing.check import validate
+from puppy.typing.validator import validator
 
-from puppy.utilities.string import charset  # NOQA
+from puppy.utilities.string import charset
 
 
 @validator

@@ -4,7 +4,7 @@ from puppy.http.mixins import (
     HTTPConnectionStateReceiverMixIn,
     HTTPConnectionStateTransmitterMixIn,
     HTTPHostTransmitterMixIn,
-)  # NOQA
+)
 
 
 class HTTP(

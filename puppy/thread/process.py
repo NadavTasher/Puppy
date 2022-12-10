@@ -1,4 +1,3 @@
-# Import python modules
 import os
 import json
 import time
@@ -6,7 +5,6 @@ import signal
 import functools
 import subprocess
 
-# Import looper classes
 from puppy.thread.looper import Looper
 
 

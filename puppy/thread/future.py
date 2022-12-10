@@ -1,6 +1,6 @@
-import sys  # NOQA
-import functools  # NOQA
-import threading  # NOQA
+import sys
+import functools
+import threading
 
 
 class Future(threading.Thread):
