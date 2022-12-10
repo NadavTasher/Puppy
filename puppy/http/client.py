@@ -1,11 +1,17 @@
 import ssl
 import socket
-import urllib
 
 from puppy.http.url import urlsplit
 from puppy.http.http import HTTP
 from puppy.http.types import Request, Headers
 from puppy.http.constants import GET, POST, COOKIE, SET_COOKIE
+
+try:
+    # Python 2 quote and unquote
+    from urllib import quote, unquote
+except:
+    # Python 3 quote and unquote
+    from urllib.parse import quote_from_bytes as quote, unquote_to_bytes as unquote
 
 # Schema constants
 SCHEMA_HTTP = b"http"
@@ -32,7 +38,7 @@ class HTTPClient(object):
                 COOKIE,
                 b"; ".join([
                     # Format as name=value
-                    b"%s=%s" % (urllib.quote(name), urllib.quote(value))
+                    b"%s=%s" % (quote(name).encode(), quote(value).encode())
                     # For each cookie in the jar
                     for name, value in self.cookies.items()
                 ]),
@@ -45,12 +51,12 @@ class HTTPClient(object):
         # Update cookie jar with response headers
         for header in response.headers.pop(SET_COOKIE):
             # Check if semicolon exists
-            if b";" in value:
+            if b";" in header:
                 # Split by semicolon
-                cookie, _ = value.split(b";", 1)
+                cookie, _ = header.split(b";", 1)
             else:
                 # Take as is
-                cookie = value
+                cookie = header
 
             # Make sure '=' exists
             if b"=" not in cookie:
@@ -58,7 +64,7 @@ class HTTPClient(object):
 
             # Split and decode
             name, value = cookie.split(b"=", 1)
-            name, value = urllib.unquote(name), urllib.unquote(value)
+            name, value = unquote(name.decode()), unquote(value.decode())
 
             # Update cookie jar
             self.cookies[name] = value
@@ -86,6 +92,11 @@ class HTTPClient(object):
     def interface(self, host, port, tls=False):
         # Determine address of host
         address = socket.gethostbyname(host), port
+
+        # Check if interface is closed and remove it
+        if address in self.interfaces:
+            if self.interfaces[address].closed:
+                del self.interfaces[address]
 
         # Check if interface already exists
         if address not in self.interfaces:
@@ -116,7 +127,7 @@ class HTTPClient(object):
         interface.host = host
 
         # Create request object
-        request = Request(method, path, Headers(headers), body)
+        request = Request(method, path or b"/", Headers(headers), body)
 
         # Update the request
         request = self._update_request(request)

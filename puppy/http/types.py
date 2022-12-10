@@ -148,8 +148,8 @@ class Headers(object):
         if not self.has(name):
             return
 
-        # Remove key from list and value from dict
-        self.store.pop(bytes(name).lower())
+        # Remove from dictionary
+        del self.store[bytes(name).lower()]
 
     def __iter__(self):
         # Loop over values and yield
