@@ -34,45 +34,24 @@ class Machine(Stoppable):
         self._state = self.start_state
         self._history = list()
 
-    def debug(self, state, reason=None, exception=None):
-        # Create printable string
-        log = "%s -> %s" % (self.name, state.__name__)
-
-        # Append reason if needed
-        if reason:
-            log = "%s (%s)" % (log, reason)
-
-        # Print with exception if needed
-        if exception:
-            logging.debug(log, exc_info=exception)
-        else:
-            logging.debug(log)
-
-    def next(self, state, reason=None, exception=None):
-        # Print the state switch
-        self.debug(state, reason, exception)
-
-        # Add history entry
-        self._history.append((state, reason, exception))
-
-        # Set the next state
-        self._state = state
-
     def loop(self):
+        self.do_state()
+
+    def do_state(self):
         try:
             # Try handling the next state
             result = self._state()
 
             # Check if the output is none
             if not result:
-                return self.next(
+                return self.set_state(
                     self.exit_state,
                     reason="State %s did not return a move" % self._state.__name__,
                 )
 
             # Check if the output is a state
             if not isinstance(result, tuple):
-                return self.next(result)
+                return self.set_state(result)
 
             # Check the length of the result
             assert len(result) in range(2, 4), ("State %s returned an invalid move" % self._state.__name__)
@@ -83,22 +62,50 @@ class Machine(Stoppable):
                 _state, _reason = result
 
                 # Set the next state
-                return self.next(_state, reason=_reason)
+                return self.set_state(_state, reason=_reason)
             elif len(result) == 3:
                 # Untuple to state, reason and exception
                 _state, _reason, _exception = result
 
                 # Set the next state
-                return self.next(_state, reason=_reason, exception=_exception)
+                return self.set_state(_state, reason=_reason, exception=_exception)
         except:
-            return self.next(
-                self.exit_state,
+            return self.set_state(
+                self.error_state,
                 reason="An unexpected exception was raised",
                 exception=sys.exc_info(),
             )
 
+    def log_state(self, state, reason=None, exception=None):
+        # Create printable string
+        log = "%s -> %s" % (self.name, state.__name__)
+
+        # Append reason if needed
+        if reason:
+            log = "%s (%s)" % (log, reason)
+
+        # Print with exception if needed
+        if exception:
+            logging.error(log, exc_info=exception)
+        else:
+            logging.debug(log)
+
+    def set_state(self, state, reason=None, exception=None):
+        # Print the state switch
+        self.log_state(state, reason, exception)
+
+        # Add history entry
+        self._history.append((state, reason, exception))
+
+        # Set the next state
+        self._state = state
+
     @state
     def start_state(self):
+        return self.stop_state
+
+    @state
+    def error_state(self):
         return self.stop_state
 
     @state
