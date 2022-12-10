@@ -134,11 +134,14 @@ class Headers(object):
             self.new(name)
 
         # Update store values
-        self.store[bytes(name).lower()] = (bytes(name), values)
+        self.store[bytes(name).lower()] = (bytes(name), list(values))
 
     def append(self, name, *values):
+        # Append values to existing
+        values = self.get(name) + list(values)
+
         # Update store values
-        self.set(name, self.get(name) + list(values))
+        self.set(name, *values)
 
     def remove(self, name):
         # Make sure the header exists
