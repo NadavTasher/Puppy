@@ -97,10 +97,7 @@ def Email(value):
             assert part
 
             # Make sure part matches charset
-            assert charset(
-                part,
-                "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+/=?^_`{|}~-",
-            )
+            validate(part, Charset["abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+/=?^_`{|}~-"])
 
         # Loop over all parts of domain
         for part in domain.split("."):
@@ -108,7 +105,7 @@ def Email(value):
             assert part
 
             # Make sure part matches charset
-            assert charset(part, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-")
+            validate(part, Charset["abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"])
     except:
         raise TypeError("%r is not an email address" % value)
 
@@ -119,7 +116,7 @@ def Charset(value, chars):
     validate(value, Text)
 
     # Validate charset
-    if not charset(value, chars):
+    if any(char not in chars for char in value):
         raise TypeError("%r has an invalid character" % value)
 
 
