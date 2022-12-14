@@ -57,7 +57,7 @@ def make(path):
         # Format all python files
         for name in os.listdir(subpath):
             if name.endswith(".py"):
-                os.system("yapf -i %s --style %s" % (os.path.join(subpath, name), json.dumps("{based_on_style: google, column_limit: 120, indent_width: 4}")))
+                os.system("yapf -i %s --style %s" % (os.path.join(subpath, name), json.dumps("{based_on_style: google, column_limit: 400, indent_width: 4}")))
 
 
 def main(path):
