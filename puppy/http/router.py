@@ -81,8 +81,8 @@ class HTTPRouter(object):
 
     def __call__(self, request):
         # Convert method and location
-        method = request.method.decode()
-        location = request.location.decode()
+        method = request.method
+        location = request.location
 
         # Parse the location
         path, query, fragment = pathsplit(location)
