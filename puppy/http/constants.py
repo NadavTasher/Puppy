@@ -1,5 +1,11 @@
-# Operating constants
+# Version constant
 VERSION = 1.1
+
+# Operating constants
+CRLF = b"\r\n"
+INTEGER = b"%d"
+SPEARATOR = b":"
+WHITESPACE = b" "
 
 # Method constants
 GET = b"GET"

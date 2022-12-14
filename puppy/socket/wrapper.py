@@ -2,17 +2,13 @@ import struct
 import socket
 import select
 
-# Defaults for wrapper
-CRLF = b"\r\n"
-CHUNK = 4 * 1024
-
 
 class SocketWrapper(object):
 
     def __init__(self, wrapped):
         # Set internal parameter
-        self._chunk = CHUNK
-        self._separator = CRLF
+        self._chunk = 4096
+        self._separator = b"\n"
 
         # Set internal variables
         self._closed = False

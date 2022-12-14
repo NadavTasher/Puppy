@@ -1,9 +1,13 @@
 # Import socket utilities
-from puppy.socket.wrapper import SocketReader, SocketWriter
+from puppy.socket.wrapper import SocketWrapper, SocketReader, SocketWriter
 
 # Import required types
 from puppy.http.types import Received, Request, Response, Headers
 from puppy.http.constants import (
+    CRLF,
+    INTEGER,
+    SPEARATOR,
+    WHITESPACE,
     CHUNKED,
     CONTENT_TYPE,
     CONTENT_LENGTH,
@@ -11,7 +15,17 @@ from puppy.http.constants import (
 )
 
 
-class HTTPReader(SocketReader):
+class HTTPSocket(SocketWrapper):
+
+    def __init__(self, *args, **kwargs):
+        # Initialize the parent
+        super(HTTPSocket, self).__init__(*args, **kwargs)
+
+        # Set the default separator
+        self._separator = CRLF
+
+
+class HTTPReader(HTTPSocket, SocketReader):
 
     def receive_artifact(self):
         # Receive all artifact components
@@ -29,11 +43,11 @@ class HTTPReader(SocketReader):
         # Loop over all lines
         for line in self.readlines():
             # Validate header structure
-            if b":" not in line:
+            if SPEARATOR not in line:
                 continue
 
             # Split header line and create object
-            name, value = line.split(b":", 1)
+            name, value = line.split(SPEARATOR, 1)
             name, value = name.strip(), value.strip()
 
             # Yield new header
@@ -105,7 +119,7 @@ class HTTPReader(SocketReader):
         return self.recvall()
 
 
-class HTTPWriter(SocketWriter):
+class HTTPWriter(HTTPSocket, SocketWriter):
 
     def transmit_artifact(self, artifact):
         # Transmit all parts
@@ -115,7 +129,7 @@ class HTTPWriter(SocketWriter):
 
     def transmit_header(self, name, value):
         # Write header in "key: value" format
-        self.writeline(b"%s: %s" % (name, value))
+        self.writeline(name + SPEARATOR + WHITESPACE + value)
 
     def transmit_headers(self, headers):
         # Loop over headers and transmit them
@@ -125,7 +139,7 @@ class HTTPWriter(SocketWriter):
     def transmit_content(self, content):
         if content:
             # Write content-length header
-            self.transmit_header(CONTENT_LENGTH, b"%d" % len(content))
+            self.transmit_header(CONTENT_LENGTH, INTEGER % len(content))
 
             # Write HTTP separator
             self.writeline()
@@ -145,7 +159,7 @@ class HTTPReceiver(HTTPReader):
         artifact = self.receive_artifact()
 
         # Parse HTTP header as request header
-        method, location, _ = artifact.header.split(None, 2)
+        method, location, _ = artifact.header.split(WHITESPACE, 2)
 
         # Return created request
         return Request(method, location, artifact.headers, artifact.content)
@@ -155,7 +169,7 @@ class HTTPReceiver(HTTPReader):
         artifact = self.receive_artifact()
 
         # Parse HTTP header as response header
-        _, status, message = artifact.header.split(None, 2)
+        _, status, message = artifact.header.split(WHITESPACE, 2)
 
         # Convert status to int
         status = int(status)

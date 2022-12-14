@@ -3,6 +3,7 @@ import gzip
 
 from puppy.http.protocol import HTTPReceiver, HTTPTransmitter
 from puppy.http.constants import (
+    CRLF,
     HOST,
     GZIP,
     CLOSE,
@@ -11,7 +12,7 @@ from puppy.http.constants import (
     CONTENT_ENCODING,
 )
 
-from puppy.socket.wrapper import SocketWrapper, CRLF
+from puppy.socket.wrapper import SocketWrapper
 
 
 class HTTPGzipMixIn(SocketWrapper):
