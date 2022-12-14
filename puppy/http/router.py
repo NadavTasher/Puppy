@@ -13,6 +13,10 @@ class HTTPRouter(object):
         self.routes = dict()
 
     def add(self, location, function, *methods):
+        # Make sure location is bytes
+        if not isinstance(location, bytes):
+            location = location.encode()
+
         if methods:
             for method in methods:
                 # Attach function to routes
@@ -91,7 +95,7 @@ class HTTPRouter(object):
         response = self.handle(method, path, request)
 
         # Log the request
-        logging.info("%s %s - %d" % (method, path, response.status))
+        logging.info("%s %s - %d" % (method.decode(), path.decode(), response.status))
 
         # Return the response
         return response
