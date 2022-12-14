@@ -1,5 +1,4 @@
 import os
-import logging
 
 from puppy.http.url import pathsplit
 from puppy.http.types import Response
@@ -88,10 +87,4 @@ class HTTPRouter(object):
         path, query, fragment = pathsplit(location)
 
         # Handle the request
-        response = self.handle(method, path, request)
-
-        # Log the request
-        logging.info("%s %s - %d" % (method.decode(), path.decode(), response.status))
-
-        # Return the response
-        return response
+        return self.handle(method, path, request)
