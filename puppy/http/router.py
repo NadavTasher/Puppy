@@ -13,10 +13,6 @@ class HTTPRouter(object):
         self.routes = dict()
 
     def add(self, location, function, *methods):
-        # Make sure location is bytes
-        if not isinstance(location, bytes):
-            location = location.encode()
-
         if methods:
             for method in methods:
                 # Attach function to routes
