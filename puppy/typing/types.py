@@ -1,8 +1,6 @@
 from puppy.typing.check import validate
 from puppy.typing.validator import validator
 
-from puppy.utilities.string import charset
-
 
 @validator
 def Any(value):

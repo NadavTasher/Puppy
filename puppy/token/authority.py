@@ -1,8 +1,10 @@
+import os
 import time
 import json
 import hmac
 import base64
 import hashlib
+import binascii
 
 from puppy.typing.namedtuple import NamedTuple
 from puppy.typing.types import Any, Text, List, Dict, Optional
