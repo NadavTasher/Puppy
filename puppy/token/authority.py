@@ -4,8 +4,6 @@ import hmac
 import base64
 import hashlib
 
-from puppy.utilities.string import random
-
 from puppy.typing.namedtuple import NamedTuple
 from puppy.typing.types import Any, Text, List, Dict, Optional
 
