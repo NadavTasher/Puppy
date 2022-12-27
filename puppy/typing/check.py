@@ -28,12 +28,16 @@ def check(value, validator):
         # Validation has passed
         return True
     else:
-        # Execute validator with value
-        if validator(value) in (None, value):
-            return True
+        try:
+            # Execute validator with value
+            if validator(value) in (None, value):
+                return True
 
-    # Validation has failed
-    return False
+            # Validation has failed
+            return False
+        except:
+            # Validation has crashed
+            return False
 
 
 def validate(value, validator):
