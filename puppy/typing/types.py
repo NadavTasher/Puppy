@@ -35,7 +35,7 @@ def Optional(value, optional_type=Any):
 
 @validator
 def Text(value):
-    validate(value, (str, "".__class__))
+    validate(value, (str, u"".__class__))
 
 
 @validator
