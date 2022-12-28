@@ -137,17 +137,19 @@ class HTTPWriter(HTTPSocket, SocketWriter):
             self.transmit_header(name, value)
 
     def transmit_content(self, content):
-        # Make sure content is defined
-        content = content or bytes()
+        # Check if content should be sent
+        if content is None:
+            # Send empty newline
+            self.writeline()
+        else:
+            # Write content-length header
+            self.transmit_header(CONTENT_LENGTH, INTEGER % len(content))
 
-        # Write content-length header
-        self.transmit_header(CONTENT_LENGTH, INTEGER % len(content))
+            # Send newline separator
+            self.writeline()
 
-        # Write HTTP separator
-        self.writeline()
-
-        # Send content as is
-        self.sendall(content)
+            # Send the content buffer
+            self.sendall(content)
 
 
 class HTTPReceiver(HTTPReader):

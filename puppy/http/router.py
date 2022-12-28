@@ -73,10 +73,10 @@ class HTTPRouter(object):
                 return Response(200, b"OK", None, result)
             except:
                 # The route has raised an exception
-                return Response(500, b"Internal Server Error", None, None)
+                return Response(500, b"Internal Server Error", None, bytes())
         else:
             # The route was not found
-            return Response(404, b"Not Found", None, None)
+            return Response(404, b"Not Found", None, bytes())
 
     def __call__(self, request):
         # Convert method and location
