@@ -52,7 +52,8 @@ def execute(command, check=True, seconds=None):
         stdout, stderr = process.communicate()
 
         # Check if status code should be checked
-        assert not check or process.returncode == 0
+        if check:
+            assert process.returncode == 0
 
         # Return the outputs
         return stdout, stderr
