@@ -53,10 +53,11 @@ def execute(command, check=True, seconds=None):
 
         # Check if status code should be checked
         if check:
-            assert process.returncode == 0
+            # Make sure status was OK or raise error
+            assert process.returncode == 0, stderr
 
-        # Return the outputs
-        return stdout, stderr
+        # Return the output
+        return stdout
     finally:
         # Terminate the process
         if process.poll() is None:
