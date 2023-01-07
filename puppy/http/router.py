@@ -30,7 +30,7 @@ class HTTPRouter(object):
         # Create attachment function
         def wrapper(function):
             # Attach to all required methods
-            self.add(location, function, methods)
+            self.add(location, function, *methods)
 
             # Return the function with no change
             return function
