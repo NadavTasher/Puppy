@@ -6,6 +6,7 @@ import base64
 import hashlib
 import binascii
 
+from puppy.bunch import Bunch
 from puppy.namedtuple import NamedTuple
 from puppy.typing.types import Any, Text, List, Dict, Optional
 
@@ -30,7 +31,7 @@ class Authority(object):
         self._secret = secret
 
     def issue(self, name, contents=None, permissions=None, validity=60 * 60 * 24 * 365):
-        # Make sure all parameters are initialized
+        # Make sure parameters are initialized
         contents = contents or dict()
         permissions = permissions or list()
 
@@ -47,6 +48,9 @@ class Authority(object):
 
         # Calculate token HMAC and create buffer
         token_buffer = token_string + token_hmac
+
+        # Replace contents with bunch
+        token_object = token_object._replace(contents=Bunch(token_object.contents))
 
         # Encode the token and return
         return base64.b64encode(token_buffer), token_object
@@ -71,6 +75,9 @@ class Authority(object):
         # Validate permissions
         for permission in permissions:
             assert permission in token_object.permissions, ("Token is missing the %r permission" % permission)
+
+        # Replace contents with bunch
+        token_object = token_object._replace(contents=Bunch(token_object.contents))
 
         # Return the created object
         return token_object
