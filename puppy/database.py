@@ -4,7 +4,7 @@ import hashlib
 import threading
 import contextlib
 
-from puppy.typing.bunch import Bunch
+from puppy.bunch import Bunch
 
 
 class Database(object):
