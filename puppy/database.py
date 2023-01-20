@@ -13,16 +13,14 @@ class Database(object):
 		# Store path information
 		self.path = path
 		self.index = os.path.join(path, "index")
+		self.objects = os.path.join(path, "objects")
 
 		# Store thread-safeing variables
 		self.lock = threading.Lock()
 
-		# Make sure path exists
-		if not os.path.exists(self.path):
-			os.makedirs(self.path)
-
-	def _path(self, key):
-		return os.path.join(self.path, hashlib.sha256(key.encode()).hexdigest())
+		# Make sure objects path exists
+		if not os.path.exists(self.objects):
+			os.makedirs(self.objects)
 
 	def _read(self):
 		# Make sure index exists
@@ -47,9 +45,12 @@ class Database(object):
 			with open(self.index, "w") as file:
 				json.dump(index, file)
 
+	def _object(self, key):
+		return os.path.join(self.objects, hashlib.sha256(key.encode()).hexdigest())
+
 	def __contains__(self, key):
 		# Make sure file exists
-		if not os.path.exists(self._path(key)):
+		if not os.path.exists(self._object(key)):
 			return False
 		
 		# Make sure index contains key
@@ -60,7 +61,7 @@ class Database(object):
 		assert key in self, "No such key"
 
 		# Read file contents
-		with open(self._path(key), "r") as file:
+		with open(self._object(key), "r") as file:
 			value = json.load(file)
 
 		# Check if value is a dictionary
@@ -81,7 +82,7 @@ class Database(object):
 					index.append(key)
 
 		# Write string value to file
-		with open(self._path(key), "w") as file:
+		with open(self._object(key), "w") as file:
 			json.dump(value, file)
 
 	def __delitem__(self, key):
@@ -94,7 +95,7 @@ class Database(object):
 				index.remove(key)
 
 		# Delete item from filesystem
-		os.remove(self._path(key))
+		os.remove(self._object(key))
 
 	def __iter__(self):
 		for key in self._read():
