@@ -11,7 +11,7 @@ class Object(object):
 	def __init__(self, path):
 		self.path = path
 
-class Index(Object):
+class Index(object):
 	def __init__(self, path):
 		# Initialize parent
 		super(Index, self).__init__(path)
@@ -79,6 +79,10 @@ class Objects(Object):
 
 
 class Keystore(Bunch):
+	# Define internal variables
+	path = None
+	index = None
+	objects = None
 
 	def __init__(self, path):
 		# Create indexes
@@ -155,28 +159,6 @@ class Keystore(Bunch):
 		# Delete item from filesystem
 		remove(self.objects.read(key))
 
-	# def __getattr__(self, key):
-	# 	# Check if key is a builtin
-	# 	if hasattr(super(Keystore, self), key):
-	# 		return super(Keystore, self).__getattr__(key)
-
-	# 	# Fetch the value from the dict
-	# 	return super(Keystore, self).__getitem__(key)
-
-	# def __delattr__(self, key):
-	# 	# Make sure the key is not a builtin
-	# 	assert not hasattr(Keystore(Bunch, self), key)
-		
-	# 	# Delete the dict item
-	# 	return super(Keystore, self).__delitem__(key)
-
-	# def __setattr__(self, key, value):
-	# 	# Make sure the key is not a builtin
-	# 	assert not hasattr(super(Keystore, self), key)
-
-	# 	# Set the dict item
-	# 	return super(Keystore, self).__setitem__(key, value)
-
 	def __iter__(self):
 		for key in self.index.read():
 			yield key
@@ -193,6 +175,39 @@ class Keystore(Bunch):
 		for key in self:
 			yield key, self[key]
 
+	def get(self, key):
+		if key in self:
+			return self[key]
+
+	def pop(self, key, default=None):
+		# TODO: fix default variable
+		try:
+			value = self[key]
+			del self[key]
+			return value
+		except KeyError:
+			if default is not None:
+				return default
+			raise
+
+	def popitem(self):
+		key = self.keys().pop()
+		return key, self.pop(key)
+
+	def copy(self):
+		return Bunch(
+			[
+				# Deep copy any other instances
+				(key, value) if not isinstance(value, self.__class__) else (key, value.copy())
+				# For all items in self
+				for key, value in self.items()
+			]
+		)
+
+	def clear(self):
+		for key in self:
+			del self[key]
+
 	def update(self, *args, **kwargs):
 		# Loop over all arguments
 		for arg in args:
@@ -203,3 +218,6 @@ class Keystore(Bunch):
 		# Set the keyword values
 		for key in kwargs:
 			self[key] = kwargs[key]
+
+	def __repr__(self):
+		return "{%s}" % ", ".join("%r: %r" % item for item in self.items())

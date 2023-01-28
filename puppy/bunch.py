@@ -1,38 +1,32 @@
 class Bunch(dict):
-
+    
     def __getattr__(self, key):
-        # Check if key is a builtin
-        if hasattr(super(Bunch, self), key):
-            return super(Bunch, self).__getattr__(key)
-
-        # Fetch the value from the dict
-        value = super(Bunch, self).__getitem__(key)
-
-        # Check if the value is a dict
-        if type(value) is dict:
-            # Cast the value to a bunch
-            value = self.__class__(value)
-
-            # Update the value in the dict
-            self.__setattr__(key, value)
-
-        # Return the value
-        return value
-
-    def __delattr__(self, key):
-        # Make sure the key is not a builtin
-        assert not hasattr(super(Bunch, self), key)
-        
-        # Delete the dict item
-        return super(Bunch, self).__delitem__(key)
-
+        try:
+            return object.__getattribute__(self, key)
+        except AttributeError:
+            # Key is not in prototype chain, return it
+            return self[key]
+    
     def __setattr__(self, key, value):
-        # Make sure the key is not a builtin
-        assert not hasattr(super(Bunch, self), key)
+        try:
+            object.__getattribute__(self, key)
+        except AttributeError:
+            # Convert value to bunch
+            if type(value) is dict:
+                value = Bunch(value)
 
-        # Check if the value is a dict
-        if type(value) is dict:
-            value = self.__class__(value)
-
-        # Set the dict item
-        return super(Bunch, self).__setitem__(key, value)
+            # Set the item
+            self[key] = value
+        else:
+            # Key is in prototype chain, set it
+            object.__setattr__(self, key, value)
+    
+    def __delattr__(self, key):
+        try:
+            object.__getattribute__(self, key)
+        except AttributeError:
+            # Delete the item
+            del self[key]
+        else:
+            # Key is in prototype chain, delete it
+            object.__delattr__(self, key)
