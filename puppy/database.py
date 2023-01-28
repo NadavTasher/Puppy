@@ -7,16 +7,10 @@ import contextlib
 from puppy.bunch import Bunch
 from puppy.filesystem import remove
 
-class Object(object):
-	def __init__(self, path):
-		self.path = path
-
 class Index(object):
 	def __init__(self, path):
-		# Initialize parent
-		super(Index, self).__init__(path)
-
 		# Create variables
+		self.path = os.path.join(path, self.__class__.__name__.lower())
 		self.lock = threading.RLock()
 
 		# Create index if does not exist
@@ -47,33 +41,27 @@ class Index(object):
 			with open(self.path, "w") as file:
 				json.dump(index, file)
 
-class Objects(Object):
+class Objects(object):
 	def __init__(self, path):
-		# Initialize parent
-		super(Objects, self).__init__(path)
-
 		# Create variables
+		self.path = os.path.join(path, self.__class__.__name__.lower())
 		self.locks = dict()
 
 		# Create objects path if it does not exist
 		if not os.path.exists(self.path):
 			os.makedirs(self.path)
 
-	def lock(self, name):
-		# Check mutex for name if it does not exist
-		if name not in self.locks:
-			self.locks[name] = threading.RLock()
-
-		# Return the lock for the name
-		return self.locks[name]
-
 	def read(self, name):
 		return os.path.join(self.path, hashlib.sha256(name.encode()).hexdigest())
 	
 	@contextlib.contextmanager
 	def modify(self, name):
+		# Check mutex for name if it does not exist
+		if name not in self.locks:
+			self.locks[name] = threading.RLock()
+
 		# Lock the mutex
-		with self.lock(name):
+		with self.locks[name]:
 			# Yield the combined path
 			yield self.read(name)
 
@@ -85,15 +73,13 @@ class Keystore(Bunch):
 	objects = None
 
 	def __init__(self, path):
-		# Create indexes
-		self.path = path
+		# Create directory if it does not exist
+		if not os.path.exists(path):
+			os.makedirs(path)
 
-		# Create objects path if it does not exist
-		if not os.path.exists(self.path):
-			os.makedirs(self.path)
-
-		self.index = Index(os.path.join(path, "index"))
-		self.objects = Objects(os.path.join(path, "objects"))
+		# Create managing objects
+		self.index = Index(path)
+		self.objects = Objects(path)
 
 	def __contains__(self, key):
 		# Make sure file exists
@@ -160,24 +146,37 @@ class Keystore(Bunch):
 		remove(self.objects.read(key))
 
 	def __iter__(self):
+		# Read the index
 		for key in self.index.read():
+			# Yield all the keys
 			yield key
 		
 	def keys(self):
+		# Loop over keys
 		for key in self:
+			# Yield all the keys
 			yield key
 
 	def values(self):
+		# Loop over keys
 		for key in self:
+			# Yield all the values
 			yield self[key]
 
 	def items(self):
+		# Loop over keys
 		for key in self:
+			# Yield all keys and values
 			yield key, self[key]
 
 	def get(self, key):
-		if key in self:
-			return self[key]
+		# Make sure key exists 
+		if key not in self:
+			# Return default
+			return
+		
+		# Return the value
+		return self[key]
 
 	def pop(self, key, default=None):
 		# TODO: fix default variable
@@ -191,21 +190,35 @@ class Keystore(Bunch):
 			raise
 
 	def popitem(self):
-		key = self.keys().pop()
+		# Get the key from index
+		key = list(self).pop()
+
+		# Return the key and the value
 		return key, self.pop(key)
 
 	def copy(self):
-		return Bunch(
-			[
-				# Deep copy any other instances
-				(key, value) if not isinstance(value, self.__class__) else (key, value.copy())
-				# For all items in self
-				for key, value in self.items()
-			]
-		)
+		# Create initial bunch
+		output = Bunch()
+
+		# Loop over keys
+		for key in self:
+			# Fetch value of key
+			value = self[key]
+
+			# Check if value is a keystore
+			if isinstance(value, self.__class__):
+				value = value.copy()
+
+			# Update the bunch
+			output[key] = value
+
+		# Return the created output
+		return output
 
 	def clear(self):
+		# Loop over keys
 		for key in self:
+			# Delete all values
 			del self[key]
 
 	def update(self, *args, **kwargs):
@@ -220,4 +233,5 @@ class Keystore(Bunch):
 			self[key] = kwargs[key]
 
 	def __repr__(self):
+		# Format the data like a dictionary
 		return "{%s}" % ", ".join("%r: %r" % item for item in self.items())
