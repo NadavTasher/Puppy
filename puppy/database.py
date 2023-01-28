@@ -3,8 +3,9 @@ import json
 import hashlib
 import threading
 import contextlib
+import collections
 
-from puppy.bunch import Bunch
+from puppy.bunch import MutableBunch
 from puppy.filesystem import remove
 
 class Index(object):
@@ -66,13 +67,14 @@ class Objects(object):
 			yield self.read(name)
 
 
-class Keystore(Bunch):
+class Keystore(MutableBunch):
 	# Define internal variables
-	path = None
 	index = None
 	objects = None
 
 	def __init__(self, path):
+		super(Keystore, self).__init__()
+
 		# Create directory if it does not exist
 		if not os.path.exists(path):
 			os.makedirs(path)
@@ -150,6 +152,10 @@ class Keystore(Bunch):
 		for key in self.index.read():
 			# Yield all the keys
 			yield key
+
+	def __len__(self):
+		# Calculate the length of keys
+		return len(self)
 		
 	def keys(self):
 		# Loop over keys

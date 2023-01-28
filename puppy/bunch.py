@@ -1,4 +1,6 @@
-class Bunch(dict):
+import collections
+
+class MutableBunch(collections.MutableMapping):
     
     def __getattr__(self, key):
         try:
@@ -30,3 +32,6 @@ class Bunch(dict):
         else:
             # Key is in prototype chain, delete it
             object.__delattr__(self, key)
+
+class Bunch(dict, MutableBunch):
+    pass
