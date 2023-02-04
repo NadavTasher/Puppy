@@ -23,11 +23,11 @@ class Index(object):
 		with self.lock:
 			# Make sure index exists
 			if not os.path.exists(self.path):
-				return set()
+				return list()
 
 			# Read index contents
 			with open(self.path, "r") as file:
-				return set(json.load(file))
+				return json.load(file)
 
 	@contextlib.contextmanager
 	def modify(self):
@@ -40,7 +40,7 @@ class Index(object):
 
 			# Write to file
 			with open(self.path, "w") as file:
-				json.dump(list(index), file)
+				json.dump(index, file)
 
 class Objects(object):
 	def __init__(self, path, locks):
@@ -136,7 +136,8 @@ class Keystore(MutableBunch):
 
 		# Check if key needs to be added to index
 		with self.index.modify() as index:
-			index.add(key)
+			if key not in index:
+				index.append(key)
 
 	def __delitem__(self, key):
 		# Make sure key exists
@@ -145,7 +146,8 @@ class Keystore(MutableBunch):
 
 		# Delete item from index
 		with self.index.modify() as index:
-			index.discard(key)
+			if key in index:
+				index.remove(key)
 
 		# Delete item from filesystem
 		with self.objects.modify(key) as path:	
