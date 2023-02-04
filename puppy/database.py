@@ -3,15 +3,21 @@ import json
 import hashlib
 import threading
 import contextlib
-import collections
 
-from puppy.bunch import MutableBunch, Bunch
 from puppy.filesystem import remove
+from puppy.bunch import MutableBunchMapping, Mapping, Bunch
 
-class Index(object):
+class Node(object):
 	def __init__(self, path):
-		# Create variables
+		# Create the node's path
 		self.path = os.path.join(path, self.__class__.__name__.lower())
+
+class Index(Node):
+	def __init__(self, path):
+		# Initialize node
+		super(Index, self).__init__(path)
+
+		# Create index file lock
 		self.lock = threading.RLock()
 
 		# Create index if does not exist
@@ -42,10 +48,12 @@ class Index(object):
 			with open(self.path, "w") as file:
 				json.dump(index, file)
 
-class Objects(object):
+class Objects(Node):
 	def __init__(self, path, locks):
-		# Create variables
-		self.path = os.path.join(path, self.__class__.__name__.lower())
+		# Initialize node
+		super(Objects, self).__init__(path)
+		
+		# Set the lock dictionary
 		self.locks = locks
 
 		# Create objects path if it does not exist
@@ -70,13 +78,13 @@ class Objects(object):
 			yield path
 
 
-class Keystore(MutableBunch):
+class Keystore(MutableBunchMapping):
 	# Define internal variables
-	index = None
-	objects = None
+	_index = None
+	_objects = None
 
 	# Define default variable
-	DEFAULT = object()
+	_DEFAULT = object()
 
 	def __init__(self, path, locks):
 		# Create directory if it does not exist
@@ -84,12 +92,12 @@ class Keystore(MutableBunch):
 			os.makedirs(path)
 
 		# Create managing objects
-		self.index = Index(path)
-		self.objects = Objects(path, locks)
+		self._index = Index(path)
+		self._objects = Objects(path, locks)
 
 	def __contains__(self, key):
 		# Make sure file exists
-		if not os.path.exists(self.objects.read(key)):
+		if not os.path.exists(self._objects.read(key)):
 			return False
 		
 		# Make sure index contains key
@@ -101,7 +109,7 @@ class Keystore(MutableBunch):
 			raise KeyError(key)
 
 		# Resolve path of object
-		path = self.objects.read(key)
+		path = self._objects.read(key)
 
 		# Check if object is a simple object
 		if os.path.isfile(path):
@@ -110,14 +118,14 @@ class Keystore(MutableBunch):
 				return json.load(file)
 
 		# Create a complex object from the path
-		return Keystore(path, self.objects.locks)
+		return Keystore(path, self._objects.locks)
 
 
 	def __setitem__(self, key, value):
 		# Modify the object
-		with self.objects.modify(key) as path:	
+		with self._objects.modify(key) as path:	
 			# Check if value is a dictionary
-			if not isinstance(value, collections.Mapping):
+			if not isinstance(value, Mapping):
 				# Make sure value is JSON seriallizable
 				json.dumps(value)
 
@@ -132,10 +140,10 @@ class Keystore(MutableBunch):
 				remove(path)
 
 				# Create a new keystore
-				Keystore(path, self.objects.locks).update(value)
+				Keystore(path, self._objects.locks).update(value)
 
 		# Check if key needs to be added to index
-		with self.index.modify() as index:
+		with self._index.modify() as index:
 			if key not in index:
 				index.append(key)
 
@@ -145,52 +153,46 @@ class Keystore(MutableBunch):
 			raise KeyError(key)
 
 		# Delete item from index
-		with self.index.modify() as index:
+		with self._index.modify() as index:
 			if key in index:
 				index.remove(key)
 
 		# Delete item from filesystem
-		with self.objects.modify(key) as path:	
+		with self._objects.modify(key) as path:	
 			remove(path)
 
 	def __iter__(self):
 		# Read the index
-		for key in self.index.read():
+		for key in self._index.read():
 			# Yield all the keys
 			yield key
 
 	def __len__(self):
 		# Calculate the length of keys
-		return len(iter(self))
-		
-	def keys(self):
-		# Loop over keys
+		return len(list(iter(self)))
+
+	def __eq__(self, other):
+		# Make sure the other object is a mapping
+		if not isinstance(other, Mapping):
+			return False
+
+		# Make sure all keys exist
+		if set(self.keys()) != set(other.keys()):
+			return False
+
+		# Make sure all the values equal
 		for key in self:
-			# Yield all the keys
-			yield key
+			if self[key] != other[key]:
+				return False
 
-	def values(self):
-		# Loop over keys
-		for key in self:
-			# Yield all the values
-			yield self[key]
+		# Comparison succeeded
+		return True
 
-	def items(self):
-		# Loop over keys
-		for key in self:
-			# Yield all keys and values
-			yield key, self[key]
+	def __repr__(self):
+		# Format the data like a dictionary
+		return "{%s}" % ", ".join("%r: %r" % item for item in self.items())
 
-	def get(self, key):
-		# Make sure key exists 
-		if key not in self:
-			# Return default
-			return
-		
-		# Return the value
-		return self[key]
-
-	def pop(self, key, default=DEFAULT):
+	def pop(self, key, default=_DEFAULT):
 		try:
 			# Fetch the value
 			value = self[key]
@@ -213,8 +215,15 @@ class Keystore(MutableBunch):
 			raise
 
 	def popitem(self):
-		# Get the key from index
-		key = list(self).pop()
+		# Convert self to list
+		keys = list(self)
+
+		# If the list is empty, raise
+		if not keys:
+			raise KeyError()
+
+		# Pop a key from the list
+		key = keys.pop()
 
 		# Return the key and the value
 		return key, self.pop(key)
@@ -238,34 +247,6 @@ class Keystore(MutableBunch):
 		# Return the created output
 		return output
 
-	def clear(self):
-		# Loop over keys
-		for key in self:
-			# Delete all values
-			del self[key]
-
-	def update(self, *args, **kwargs):
-		# Loop over all arguments
-		for arg in args:
-			# Set the argument values
-			for key in arg:
-				self[key] = arg[key]
-		
-		# Set the keyword values
-		for key in kwargs:
-			self[key] = kwargs[key]
-
-	def setdefault(self, key, default=None):
-		# Check if key exists
-		if key not in self:
-			self[key] = value
-
-		# Return the value
-		return self[key]
-
-	def __repr__(self):
-		# Format the data like a dictionary
-		return "{%s}" % ", ".join("%r: %r" % item for item in self.items())
 
 class Database(Keystore):
 	def __init__(self, path):
