@@ -14,6 +14,8 @@ class Keystore(MutableBunchMapping):
     # Define default variable
     _DEFAULT = object()
 
+    __class__ = dict
+
     def __init__(self, path, locks):
         # Create directory if it does not exist
         if not os.path.exists(path):
@@ -180,3 +182,7 @@ class Database(Keystore):
     def __init__(self, path):
         # Initialize the keystore with an empty locker
         super(Database, self).__init__(path, dict())
+
+
+# Wrap the default JSON encoder
+json._default_encoder.default = lambda obj, default=json._default_encoder.default: Keystore.copy(obj) if isinstance(obj, Keystore) else default(obj)
