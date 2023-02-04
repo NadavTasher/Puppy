@@ -1,12 +1,12 @@
-import os  
-import json  
-import time  
-import logging  
-import threading  
-import functools  
-import subprocess  
+import os
+import json
+import time
+import logging
+import threading
+import functools
+import subprocess
 
-from puppy.thread.future import future  
+from puppy.thread.future import future
 
 
 def run(command, shell="/bin/sh"):

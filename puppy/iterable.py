@@ -13,3 +13,26 @@ def undup(iterable):
 
         # Yield the item
         yield item
+
+
+class Lazy(list):
+
+    def __init__(self, iterable):
+        # Set the iterator
+        self.iterable = iterable
+        self.iterator = iter(self.iterable)
+
+    def __getitem__(self, index):
+        # Make sure the list has the item
+        try:
+            while len(self) <= index:
+                # Append the next item
+                super(Lazy, self).append(self.iterator.next())
+        except StopIteration:
+            pass
+
+        # Return the item at the index
+        return super(Lazy, self).__getitem__(index)
+
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__.__name__, self.iterable)
