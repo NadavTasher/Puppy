@@ -1,6 +1,6 @@
-import os  
-import tempfile  
-import contextlib  
+import os
+import tempfile
+import contextlib
 
 
 def remove(path):
@@ -20,10 +20,11 @@ def remove(path):
         # Remove empty directory
         os.rmdir(path)
 
+
 @contextlib.contextmanager
-def temporary():
+def temporary(*args, **kwargs):
     # Create temporary path
-    path = tempfile.mktemp()
+    path = tempfile.mktemp(*args, **kwargs)
 
     # Try yielding the path
     try:

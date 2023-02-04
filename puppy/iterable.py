@@ -16,6 +16,7 @@ def undup(iterable):
 
 
 class Lazy(list):
+
     def __init__(self, iterable):
         # Set the iterator
         self.iterable = iterable
