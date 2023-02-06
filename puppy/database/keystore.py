@@ -1,5 +1,6 @@
 import os
 import json
+import functools
 
 from puppy.bunch import MutableBunchMapping, Mapping, Bunch
 from puppy.filesystem import remove
@@ -13,8 +14,6 @@ class Keystore(MutableBunchMapping):
 
     # Define default variable
     _DEFAULT = object()
-
-    __class__ = dict
 
     def __init__(self, path, locks):
         # Create directory if it does not exist
@@ -184,5 +183,18 @@ class Database(Keystore):
         super(Database, self).__init__(path, dict())
 
 
-# Wrap the default JSON encoder
-json._default_encoder.default = lambda obj, default=json._default_encoder.default: Keystore.copy(obj) if isinstance(obj, Keystore) else default(obj)
+class Encoder(json.JSONEncoder):
+
+    def default(self, obj):
+        # Check if the object is a keystore
+        if isinstance(obj, Keystore):
+            # Return a JSON encodable representation of the keystore
+            return obj.copy()
+
+        # Fallback default
+        return super(Encoder, self).default(obj)
+
+
+# Update the default dumps function
+json.dump = functools.partial(json.dump, cls=Encoder)
+json.dumps = functools.partial(json.dumps, cls=Encoder)
