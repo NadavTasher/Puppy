@@ -4,90 +4,113 @@ from puppy.typing.validator import validator
 
 @validator
 def Any(value):
-    pass
+    return True
 
 
 @validator
 def Union(value, *value_types):
     # Validate value with types
-    validate(value, tuple(value_types))
+    return isinstance(value, tuple(value_types))
 
 
 @validator
 def Literal(value, *literal_values):
     # Make sure value exists
-    if value in literal_values:
-        return
-
-    # Raise type error
-    raise TypeError("%r does not exist in %r" % (value, literal_values))
+    return value in literal_values
 
 
 @validator
 def Optional(value, optional_type=Any):
     # Return if value is none
     if value is None:
-        return
+        return True
 
     # Validate further
-    validate(value, optional_type)
+    return isinstance(value, optional_type)
 
 
 @validator
 def Text(value):
-    validate(value, (str, u"".__class__))
+    return isinstance(value, (str, u"".__class__))
 
 
 @validator
 def List(value, item_type=Any):
     # Make sure value is a list
-    validate(value, list)
+    if not isinstance(value, list):
+        return False
 
-    # Loop over value and check them
+    # Loop over value and check items
     for item in value:
-        validate(item, item_type)
+        if not isinstance(item, item_type):
+            return False
+    
+    # Validation has passed
+    return True
 
 
 @validator
 def Dict(value, key_type=Any, value_type=Any):
     # Make sure value is a dictionary
-    validate(value, dict)
+    if not isinstance(value, dict):
+        return False
 
     # Loop over keys and values and check types
     for key, value in value.items():
-        validate(key, key_type)
-        validate(value, value_type)
+        # Validate key type
+        if not isinstance(key, key_type):
+            return False
+
+        # Validate value type
+        if not isinstance(value, value_type):
+            return False
+
+    # Validation has passed
+    return True
 
 
 @validator
 def Tuple(value, *item_types):
     # Make sure value is a tuple
-    validate(value, tuple)
+    if not isinstance(value, tuple):
+        return False
 
     # If types do not exist, return
     if not item_types:
-        return
+        return True
 
     # Make sure value is of length
     if len(value) != len(item_types):
-        raise TypeError("%r is invalid (length != %d)" % (value, len(item_types)))
+        return False
 
     # Loop over values in tuple and validate them
     for item, item_type in zip(value, item_types):
-        validate(item, item_type)
+        if not isinstance(item, item_type):
+            return False
+    
+    # Validation has passed
+    return True
 
+@validator
+def Schema(value, schema):
+    # TODO: implement
+    pass
 
 @validator
 def Email(value):
+    # TODO implement
+
     # Make sure value is a string
-    validate(value, Text)
+    if not isinstance(value, Text):
+        return False
 
     try:
         # Split into two (exactly)
         address, domain = value.split("@")
 
         # Make sure address and domain are defined
-        assert address and domain
+        if not (address and domain):
+            return False
 
         # Loop over all parts of address
         for part in address.split("."):
@@ -111,11 +134,15 @@ def Email(value):
 @validator
 def Charset(value, chars):
     # Make sure value is a string
-    validate(value, Text)
+    if not isinstance(value, Text):
+        return False
 
     # Validate charset
     if any(char not in chars for char in value):
-        raise TypeError("%r has an invalid character" % value)
+        return False
+
+    # Validation has passed
+    return True
 
 
 # Initialize some charsets
