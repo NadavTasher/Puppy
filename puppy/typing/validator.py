@@ -25,12 +25,12 @@ class validator(object):
         # Run type validation
         return self._target(value, *arguments)
 
-    def __getitem__(self, index):
+    def __getitem__(self, argument):
         # Convert index into list
-        if check(index, tuple):
-            arguments = [item for item in index]
+        if isinstance(argument, tuple):
+            arguments = list(argument)
         else:
-            arguments = [index]
+            arguments = [argument]
 
         # Return a partial validator
         return partial(self, arguments)
