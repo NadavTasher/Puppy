@@ -93,8 +93,24 @@ def Tuple(value, *item_types):
 
 @validator
 def Schema(value, schema):
-    # TODO: implement
-    pass
+    # Make sure schema is a dict
+    if not isinstance(schema, dict):
+        return False
+
+    # Make sure all items are valid
+    for key, value in schema.items():
+        # Check if the value is a dict
+        if isinstance(value, dict):
+            # Validate as schema
+            if not isinstance(value.get(key), Schema[value])
+                return False
+        else:
+            # Validate as type
+            if not isinstance(value.get(key), value):
+                return False
+        
+    # Validation has passed
+    return True
 
 @validator
 def Email(value):
