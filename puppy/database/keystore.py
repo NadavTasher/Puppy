@@ -1,5 +1,6 @@
 import os
 import json
+import functools
 
 from puppy.bunch import MutableBunchMapping, Mapping, Bunch
 from puppy.filesystem import remove
@@ -180,3 +181,20 @@ class Database(Keystore):
     def __init__(self, path):
         # Initialize the keystore with an empty locker
         super(Database, self).__init__(path, dict())
+
+
+class Encoder(json.JSONEncoder):
+
+    def default(self, obj):
+        # Check if the object is a keystore
+        if isinstance(obj, Keystore):
+            # Return a JSON encodable representation of the keystore
+            return obj.copy()
+
+        # Fallback default
+        return super(Encoder, self).default(obj)
+
+
+# Update the default dumps function
+json.dump = functools.partial(json.dump, cls=Encoder)
+json.dumps = functools.partial(json.dumps, cls=Encoder)
