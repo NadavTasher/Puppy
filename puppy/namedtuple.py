@@ -2,7 +2,6 @@
 import collections
 
 # Import types for type checking
-from puppy.typing.check import validate
 from puppy.typing.types import Any, List, Tuple
 
 
@@ -18,11 +17,12 @@ def NamedTuple(name, fields):
             self = classtype.__new__(cls, *args, **kwargs)
 
             # Loop over properties and validate inputs
-            for key, validator in fields:
+            for key, value in fields:
                 # Check input with validator
-                validate(getattr(self, key), validator)
+                if not isinstance(getattr(self, key), value):
+                    raise TypeError("Argument %s in not an instance of %r" % (key, value))
 
-            # Initialize the tuple
+            # Return the created tuple
             return self
 
     # Return created tuple

@@ -1,39 +1,41 @@
-from puppy.typing.check import check
+class Validator(object):
 
+    def __init__(self, function):
+        self.function = function
 
-class partial(object):
+    def __instancecheck__(self, value):
+        # Check type using the function
+        return self.function(value)
 
-    def __init__(self, target, arguments):
-        # Set internal function
-        self._target = target
-        self._arguments = arguments
-
-    def __call__(self, value):
-        return self._target(value, *self._arguments)
-
-    def __repr__(self):
-        return "%r%s" % (self._target, str(list(self._arguments)))
-
-
-class validator(object):
-    # Wrapper constructor
-    def __init__(self, target):
-        # Set internal function
-        self._target = target
-
-    def __call__(self, value, *arguments):
-        # Run type validation
-        return self._target(value, *arguments)
-
-    def __getitem__(self, index):
+    def __getitem__(self, argument):
         # Convert index into list
-        if check(index, tuple):
-            arguments = [item for item in index]
+        if isinstance(argument, tuple):
+            arguments = list(argument)
         else:
-            arguments = [index]
+            arguments = [argument]
 
         # Return a partial validator
-        return partial(self, arguments)
+        return Subvalidator(self, *arguments)
 
     def __repr__(self):
-        return self._target.__name__
+        # Return the name of the function
+        return self.function.__name__
+
+
+class Subvalidator(object):
+
+    def __init__(self, validator, *arguments):
+        self.validator = validator
+        self.arguments = arguments
+
+    def __instancecheck__(self, value):
+        # Check type using the function with the arguments
+        return self.validator.function(value, *self.arguments)
+
+    def __repr__(self):
+        # Return the representation of the validator
+        return "%r%s" % (self.validator, str(self.arguments))
+
+
+# Add lowercase for ease of use
+validator = Validator
