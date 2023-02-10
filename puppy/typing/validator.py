@@ -1,10 +1,11 @@
-class validator(object):
-    def __init__(self, function, *arguments):
+class Validator(object):
+
+    def __init__(self, function):
         self.function = function
-        self.arguments = arguments
 
     def __instancecheck__(self, value):
-        return self.function(value, *self.arguments)
+        # Check type using the function
+        return self.function(value)
 
     def __getitem__(self, argument):
         # Convert index into list
@@ -14,12 +15,27 @@ class validator(object):
             arguments = [argument]
 
         # Return a partial validator
-        return self.__class__(self.function, *arguments)
+        return Subvalidator(self, *arguments)
 
     def __repr__(self):
-        # Check if arguments are present
-        if not self.arguments:
-            return self.function.__name__
+        # Return the name of the function
+        return self.function.__name__
 
-        # Append arguments to name
-        return "%r%s" % (self.function.__name__, str(list(self.arguments)))
+
+class Subvalidator(object):
+
+    def __init__(self, validator, *arguments):
+        self.validator = validator
+        self.arguments = arguments
+
+    def __instancecheck__(self, value):
+        # Check type using the function with the arguments
+        return self.validator.function(value, *self.arguments)
+
+    def __repr__(self):
+        # Return the representation of the validator
+        return "%r%s" % (self.validator, str(self.arguments))
+
+
+# Add lowercase for ease of use
+validator = Validator

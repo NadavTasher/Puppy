@@ -1,62 +1,61 @@
-from puppy.typing.check import validate
 from puppy.typing.validator import validator
 
 
 @validator
-def Any(value):
+def Any(variable):
     return True
 
 
 @validator
-def Union(value, *value_types):
+def Union(variable, *value_types):
     # Validate value with types
-    return isinstance(value, tuple(value_types))
+    return isinstance(variable, tuple(value_types))
 
 
 @validator
-def Literal(value, *literal_values):
+def Literal(variable, *literal_values):
     # Make sure value exists
-    return value in literal_values
+    return variable in literal_values
 
 
 @validator
-def Optional(value, optional_type=Any):
+def Optional(variable, optional_type=Any):
     # Return if value is none
-    if value is None:
+    if variable is None:
         return True
 
     # Validate further
-    return isinstance(value, optional_type)
+    return isinstance(variable, optional_type)
 
 
 @validator
-def Text(value):
-    return isinstance(value, (str, u"".__class__))
+def Text(variable):
+    return isinstance(variable, (str, u"".__class__))
 
 
 @validator
-def List(value, item_type=Any):
+def List(variable, item_type=Any):
     # Make sure value is a list
-    if not isinstance(value, list):
+    if not isinstance(variable, list):
         return False
 
     # Loop over value and check items
-    for item in value:
+    for item in variable:
         if not isinstance(item, item_type):
             return False
-    
+
     # Validation has passed
     return True
 
 
 @validator
-def Dict(value, key_type=Any, value_type=Any):
+def Dict(variable, key_type=Any, value_type=Any):
     # Make sure value is a dictionary
-    if not isinstance(value, dict):
+    if not isinstance(variable, dict):
         return False
 
     # Loop over keys and values and check types
-    for key, value in value.items():
+    for key, value in variable.items():
         # Validate key type
         if not isinstance(key, key_type):
             return False
@@ -70,9 +69,9 @@ def Dict(value, key_type=Any, value_type=Any):
 
 
 @validator
-def Tuple(value, *item_types):
+def Tuple(variable, *item_types):
     # Make sure value is a tuple
-    if not isinstance(value, tuple):
+    if not isinstance(variable, tuple):
         return False
 
     # If types do not exist, return
@@ -80,21 +79,30 @@ def Tuple(value, *item_types):
         return True
 
     # Make sure value is of length
-    if len(value) != len(item_types):
+    if len(variable) != len(item_types):
         return False
 
     # Loop over values in tuple and validate them
-    for item, item_type in zip(value, item_types):
+    for item, item_type in zip(variable, item_types):
         if not isinstance(item, item_type):
             return False
-    
+
     # Validation has passed
     return True
 
+
 @validator
-def Schema(value, schema):
+def Schema(variable, schema):
+    # Make sure variable is a dict
+    if not isinstance(variable, dict):
+        return False
+
     # Make sure schema is a dict
     if not isinstance(schema, dict):
+        return False
+
+    # Make sure all of the keys exist
+    if set(variable.keys()) - set(schema.keys()):
         return False
 
     # Make sure all items are valid
@@ -102,60 +110,86 @@ def Schema(value, schema):
         # Check if the value is a dict
         if isinstance(value, dict):
             # Validate as schema
-            if not isinstance(value.get(key), Schema[value])
+            if not isinstance(variable.get(key), Schema[value]):
                 return False
         else:
             # Validate as type
-            if not isinstance(value.get(key), value):
+            if not isinstance(variable.get(key), value):
                 return False
-        
+
     # Validation has passed
     return True
 
-@validator
-def Email(value):
-    # TODO implement
-
-    # Make sure value is a string
-    if not isinstance(value, Text):
-        return False
-
-    try:
-        # Split into two (exactly)
-        address, domain = value.split("@")
-
-        # Make sure address and domain are defined
-        if not (address and domain):
-            return False
-
-        # Loop over all parts of address
-        for part in address.split("."):
-            # Make sure part is not empty
-            assert part
-
-            # Make sure part matches charset
-            validate(part, Charset["abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+/=?^_`{|}~-"])
-
-        # Loop over all parts of domain
-        for part in domain.split("."):
-            # Make sure part is not empty
-            assert part
-
-            # Make sure part matches charset
-            validate(part, Charset["abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"])
-    except:
-        raise TypeError("%r is not an email address" % value)
-
 
 @validator
-def Charset(value, chars):
+def Charset(variable, chars):
     # Make sure value is a string
-    if not isinstance(value, Text):
+    if not isinstance(variable, Text):
         return False
 
     # Validate charset
-    if any(char not in chars for char in value):
+    if any(char not in chars for char in variable):
         return False
+
+    # Validation has passed
+    return True
+
+
+@validator
+def Domain(variable):
+    # Make sure value is a string
+    if not isinstance(variable, Text):
+        return False
+
+    # Split to parts by dot
+    parts = variable.split(".")
+
+    # Make sure all parts are not empty
+    if not all(parts):
+        return False
+
+    # Loop over parts and validate characters
+    for part in parts:
+        if not isinstance(part.lower(), Charset["abcdefghijklmnopqrstuvwxyz0123456789-"]):
+            return False
+
+    # Validation has passed
+    return True
+
+
+@validator
+def Email(variable):
+    # Make sure value is a string
+    if not isinstance(variable, Text):
+        return False
+
+    # Split into two (exactly)
+    parts = variable.split("@")
+
+    # Make sure the length is 2
+    if len(parts) != 2:
+        return False
+
+    # Extract address and domain
+    address, domain = parts
+
+    # Make sure address and domain are defined
+    if not (address and domain):
+        return False
+
+    # Make sure the domain is an FQDN
+    if not isinstance(domain, Domain):
+        return False
+
+    # Make sure the address is valid
+    for part in address.split("."):
+        # Make sure part is not empty
+        if not part:
+            return False
+
+        # Make sure part matches charset
+        if not isinstance(part, Charset["abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-/=?^_`{|}~"]):
+            return False
 
     # Validation has passed
     return True
