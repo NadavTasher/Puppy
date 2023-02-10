@@ -9,7 +9,23 @@ def Any(variable):
 @validator
 def Union(variable, *value_types):
     # Validate value with types
-    return isinstance(variable, tuple(value_types))
+    for value_type in value_types:
+        if isinstance(variable, value_type):
+            return True
+
+    # Validation has failed
+    return False
+
+
+@validator
+def Intersection(variable, *value_types):
+    # Validate value with types
+    for value_type in value_types:
+        if not isinstance(variable, value_type):
+            return False
+
+    # Validation has passed
+    return True
 
 
 @validator
