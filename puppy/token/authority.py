@@ -6,22 +6,16 @@ import base64
 import hashlib
 import binascii
 
-from puppy.bunch import Bunch
-from puppy.namedtuple import NamedTuple
-from puppy.typing.types import Any, Text, List, Dict, Optional
+# Import token types
+from puppy.token.types import Token
 
-# Class to store tokens
-Token = NamedTuple(
-    "Token",
-    [
-        ("id", Text),
-        ("name", Text),
-        ("contents", Dict[Text, Any]),
-        ("validity", int),
-        ("timestamp", int),
-        ("permissions", List[Text]),
-    ],
-)
+# Import general utilities
+from puppy.bunch import Bunch
+from puppy.typing.types import Bytes, Text, Union
+from puppy.typing.validator import validator
+
+# Length of the token signature
+SIGNATURE = 32
 
 
 class Authority(object):
@@ -55,12 +49,15 @@ class Authority(object):
         # Encode the token and return
         return base64.b64encode(token_buffer), token_object
 
-    def validate(self, token, *permissions):
+    def parse(self, token, *permissions):
+        # Make sure token is a string
+        assert isinstance(token, Union[Text, Bytes]), "Token type is invalid"
+
         # Decode token to buffer
         token_buffer = base64.b64decode(token)
 
         # Split buffer to token string and HMAC
-        token_string, token_hmac = token_buffer[:-32], token_buffer[-32:]
+        token_string, token_hmac = token_buffer[:-SIGNATURE], token_buffer[-SIGNATURE:]
 
         # Validate HMAC of buffer
         assert (hmac.new(self._secret, token_string, hashlib.sha256).digest() == token_hmac), "Token HMAC is invalid"
@@ -81,3 +78,21 @@ class Authority(object):
 
         # Return the created object
         return token_object
+
+    @property
+    def TokenType(self):
+
+        @validator
+        def validate(token, *permissions):
+            try:
+                # Try parsing the token
+                self.parse(token, *permissions)
+
+                # Validation has passed
+                return True
+            except:
+                # Validation has failed
+                return False
+
+        # Return the validator
+        return validate
