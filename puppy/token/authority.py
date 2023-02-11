@@ -18,28 +18,31 @@ from puppy.typing.validator import validator
 SIGNATURE = 32
 
 
-@validator
-def TokenType(token, authority, *permissions):
-    # Make sure token type is right
-    if not isinstance(token, Union[Text, Bytes]):
-        return False
-
-    # Try validating using authority
-    try:
-        authority.validate(token, *permissions)
-
-        # Validation has passed
-        return True
-    except:
-        # Validation has failed
-        return False
-
-
 class Authority(object):
 
     def __init__(self, secret):
         # Set the secret
         self._secret = secret
+
+        # Create the validator
+        @validator
+        def TokenType(token, *permissions):
+            # Make sure token type is right
+            if not isinstance(token, Union[Text, Bytes]):
+                return False
+
+            # Try validating using authority
+            try:
+                self.validate(token, *permissions)
+
+                # Validation has passed
+                return True
+            except:
+                # Validation has failed
+                return False
+
+        # Set the validator
+        self.TokenType = TokenType
 
     def issue(self, name, contents=None, permissions=None, validity=60 * 60 * 24 * 365):
         # Make sure parameters are initialized
