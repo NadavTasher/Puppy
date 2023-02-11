@@ -34,7 +34,7 @@ class Subvalidator(object):
 
     def __repr__(self):
         # Return the representation of the validator
-        return "%r%s" % (self._validator, str(self._arguments))
+        return "%r%r" % (self._validator, list(self._arguments))
 
 
 # Add lowercase for ease of use
