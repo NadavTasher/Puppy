@@ -50,6 +50,11 @@ def Text(variable):
 
 
 @validator
+def Bytes(variable):
+    return isinstance(variable, bytes)
+
+
+@validator
 def List(variable, item_type=Any):
     # Make sure value is a list
     if not isinstance(variable, list):

@@ -6,22 +6,16 @@ import base64
 import hashlib
 import binascii
 
-from puppy.bunch import Bunch
-from puppy.namedtuple import NamedTuple
-from puppy.typing.types import Any, Text, List, Dict, Optional
+# Import token types
+from puppy.token.types import Token
 
-# Class to store tokens
-Token = NamedTuple(
-    "Token",
-    [
-        ("id", Text),
-        ("name", Text),
-        ("contents", Dict[Text, Any]),
-        ("validity", int),
-        ("timestamp", int),
-        ("permissions", List[Text]),
-    ],
-)
+# Import general utilities
+from puppy.bunch import Bunch
+from puppy.typing.types import Bytes, Text, Union
+from puppy.typing.validator import validator
+
+# Length of the token signature
+SIGNATURE = 32
 
 
 class Authority(object):
@@ -29,6 +23,26 @@ class Authority(object):
     def __init__(self, secret):
         # Set the secret
         self._secret = secret
+
+        # Create the validator
+        @validator
+        def TokenType(token, *permissions):
+            # Make sure token type is right
+            if not isinstance(token, Union[Text, Bytes]):
+                return False
+
+            # Try validating using authority
+            try:
+                self.validate(token, *permissions)
+
+                # Validation has passed
+                return True
+            except:
+                # Validation has failed
+                return False
+
+        # Set the validator
+        self.TokenType = TokenType
 
     def issue(self, name, contents=None, permissions=None, validity=60 * 60 * 24 * 365):
         # Make sure parameters are initialized
@@ -60,7 +74,7 @@ class Authority(object):
         token_buffer = base64.b64decode(token)
 
         # Split buffer to token string and HMAC
-        token_string, token_hmac = token_buffer[:-32], token_buffer[-32:]
+        token_string, token_hmac = token_buffer[:-SIGNATURE], token_buffer[-SIGNATURE:]
 
         # Validate HMAC of buffer
         assert (hmac.new(self._secret, token_string, hashlib.sha256).digest() == token_hmac), "Token HMAC is invalid"
