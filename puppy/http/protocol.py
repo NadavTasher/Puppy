@@ -29,11 +29,11 @@ class HTTPSocket(SocketWrapper):
 
 class HTTPReader(HTTPSocket, SocketReader):
 
-    def receive_artifact(self):
+    def receive_artifact(self, content_expected=True):
         # Receive all artifact components
         header = self.readline()
         headers = self.receive_headers()
-        content = self.receive_content(headers)
+        content = self.receive_content(headers, content_expected)
 
         # Return created artifact
         return Received(header, headers, content)
@@ -58,7 +58,7 @@ class HTTPReader(HTTPSocket, SocketReader):
         # Return the headers object
         return headers
 
-    def receive_content(self, headers):
+    def receive_content(self, headers, content_expected=True):
         # If a length is defined, fetch by length
         if headers.has(CONTENT_LENGTH):
             # Fetch content-length header
@@ -82,14 +82,9 @@ class HTTPReader(HTTPSocket, SocketReader):
         if not headers.has(CONTENT_TYPE):
             return
 
-        # Make sure connection is defined
-        if not headers.has(CONNECTION):
+        # Make sure content is expected
+        if not content_expected:
             return
-
-        # Make sure connection will close
-        for connection in headers.get(CONNECTION):
-            if connection.lower() != CLOSE:
-                return
 
         # Receive content until socket is closed
         return self.receive_content_by_stream()
@@ -158,7 +153,7 @@ class HTTPReceiver(HTTPReader):
 
     def receive_request(self):
         # Receive artifact from parent
-        artifact = self.receive_artifact()
+        artifact = self.receive_artifact(content_expected=False)
 
         # Parse HTTP header as request header
         method, location, _ = artifact.header.split(WHITESPACE, 2)
@@ -168,7 +163,7 @@ class HTTPReceiver(HTTPReader):
 
     def receive_response(self):
         # Receive artifact from parent
-        artifact = self.receive_artifact()
+        artifact = self.receive_artifact(content_expected=True)
 
         # Parse HTTP header as response header
         _, status, message = artifact.header.split(WHITESPACE, 2)
