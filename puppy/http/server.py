@@ -101,4 +101,4 @@ class HTTPServer(SocketServer):
         # Initialize SSL context
         self.context = ssl.create_default_context()
         self.context.check_hostname = False
-        self.context.verify_mode = ssl.CERT_OPTIONAL
+        self.context.verify_mode = ssl.CERT_NONE
