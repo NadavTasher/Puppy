@@ -22,9 +22,9 @@ class HTTPGzipMixIn(SocketWrapper):
 
 class HTTPGzipReceiverMixIn(HTTPGzipMixIn, HTTPReceiver):
 
-    def receive_artifact(self):
+    def receive_artifact(self, *args, **kwargs):
         # Read artifact from parent
-        artifact = super(HTTPGzipReceiverMixIn, self).receive_artifact()
+        artifact = super(HTTPGzipReceiverMixIn, self).receive_artifact(*args, **kwargs)
 
         # Update compression support from artifact
         self._update_compression_support(artifact.headers)
@@ -96,9 +96,9 @@ class HTTPConnectionStateMixIn(SocketWrapper):
 
 class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
 
-    def receive_artifact(self):
+    def receive_artifact(self, *args, **kwargs):
         # Receive artifact from headers
-        artifact = super(HTTPConnectionStateReceiverMixIn, self).receive_artifact()
+        artifact = super(HTTPConnectionStateReceiverMixIn, self).receive_artifact(*args, **kwargs)
 
         # Update connection state
         self._update_connection_state(artifact.headers)
