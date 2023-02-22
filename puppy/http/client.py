@@ -4,7 +4,7 @@ import socket
 from puppy.http.url import urlsplit
 from puppy.http.http import HTTP
 from puppy.http.types import Request, Headers
-from puppy.http.constants import GET, POST, COOKIE, SET_COOKIE
+from puppy.http.constants import GET, POST, COOKIE, SET_COOKIE, INTEGER
 
 try:
     # Python 2 quote and unquote
@@ -115,8 +115,18 @@ class HTTPClient(object):
         return self.interfaces[address]
 
     def request(self, method, url, headers=[], body=None):
+        # Create headers object
+        headers = Headers(headers)
+
         # Parse URL using parser
         schema, host, port, path = urlsplit(url)
+
+        # Add host header if required
+        if not headers.has(HOST):
+            if not port:
+                headers.set(HOST, host)
+            else:
+                headers.set(HOST, host + b":" + INTEGER % port)
 
         # Make sure port is defined
         schema = schema or SCHEMA_HTTP
@@ -124,10 +134,9 @@ class HTTPClient(object):
 
         # Get interface for request by address and update host
         interface = self.interface(host, port, schema == SCHEMA_HTTPS)
-        interface.host = host
 
         # Create request object
-        request = Request(method, path or b"/", Headers(headers), body)
+        request = Request(method, path or b"/", headers, body)
 
         # Update the request
         request = self._update_request(request)

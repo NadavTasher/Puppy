@@ -3,7 +3,10 @@ import gzip
 
 from puppy.http.protocol import HTTPReceiver, HTTPTransmitter
 from puppy.http.constants import (
+    CR,
+    LF,
     CRLF,
+    INTEGER,
     HOST,
     GZIP,
     CLOSE,
@@ -16,7 +19,6 @@ from puppy.socket.wrapper import SocketWrapper
 
 
 class HTTPGzipMixIn(SocketWrapper):
-    # Internal supported variable
     compression_support = False
 
 
@@ -90,7 +92,6 @@ class HTTPGzipTransmitterMixIn(HTTPGzipMixIn, HTTPTransmitter):
 
 
 class HTTPConnectionStateMixIn(SocketWrapper):
-    # Internal close variable
     should_close = False
 
 
@@ -151,21 +152,17 @@ class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmit
 
 
 class HTTPHostTransmitterMixIn(HTTPTransmitter):
-    # Set internal host variable
-    host = None
 
     def transmit_request(self, request):
-        # Create host variable with global
-        host = self.host
+        # Make sure no host header is defined
+        if not request.headers.has(HOST):
+            return super(HTTPHostTransmitterMixIn, self).transmit_request(request)
 
-        # Make sure host header is defined
-        if not host:
-            # Get IP from peername and encode
-            host, _ = self._socket.getpeername()
-            host = host.encode()
+        # Get host from peername and encode
+        host, port = self._socket.getpeername()
 
         # Update the request with the appropriate header
-        request.headers.set(HOST, host)
+        request.headers.set(HOST, host.encode() + b":" + INTEGER % port)
 
         # Transmit the request
         return super(HTTPHostTransmitterMixIn, self).transmit_request(request)
@@ -224,3 +221,56 @@ class HTTPSafeReceiverMixIn(HTTPReceiver):
 
         # Return the buffer without the CRLF
         return buffer[:-len(self._separator)]
+
+
+class HTTPCompatibleReceiverMixIn(HTTPReceiver):
+
+    def readline(self):
+        # Create a reading buffer
+        buffer = bytes()
+
+        # Loop until CRLF in buffer
+        while LF not in buffer:
+            # Read and append to buffer
+            buffer += self.recvexact(1)
+
+        # Strip the LF from the buffer
+        buffer = buffer[:-len(LF)]
+
+        # Make sure buffer is not empty
+        if not buffer:
+            return buffer
+
+        # Check if CR should be stripped
+        if buffer[-len(CR)] != CR:
+            return buffer
+
+        # Return the modified buffer
+        return buffer[:-len(CR)]
+
+
+class HTTPBufferedTransmitterMixIn(HTTPTransmitter):
+
+    buffer = None
+
+    def sendall(self, buffer):
+        # Add to buffer using send
+        self.send(buffer)
+
+        # Flush the buffer
+        self.flush()
+
+    def send(self, buffer):
+        # Make sure buffer is initialized
+        if not self.buffer:
+            self.buffer = io.BytesIO()
+
+        # Append data to buffer
+        self.buffer.write(buffer)
+
+    def flush(self):
+        # Write the data using the parents' sendall
+        super(HTTPBufferedTransmitterMixIn, self).sendall(self.buffer.getvalue())
+
+        # Clear the buffer
+        self.buffer = None
