@@ -7,7 +7,7 @@ class Artifact(object):
 
     def __init__(self, headers=None, content=None):
         # Set the internal contents
-        self.headers = headers or Headers()
+        self.headers = Headers(headers)
         self.content = content
 
     @property
@@ -90,9 +90,13 @@ class Response(Artifact):
 
 class Headers(object):
 
-    def __init__(self, headers=[]):
+    def __init__(self, headers=None):
         # Initialize order list
         self.store = collections.OrderedDict()
+
+        # Skip if no headers
+        if not headers:
+            return
 
         # Add all headers
         for name, value in headers:
