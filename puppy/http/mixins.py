@@ -253,12 +253,17 @@ class HTTPBufferedTransmitterMixIn(HTTPTransmitter):
 
     buffer = None
 
+    def transmit_artifact(self, artifact):
+        try:
+            # Transmit the artifact using the parent
+            return super(HTTPBufferedTransmitterMixIn, self).transmit_artifact(artifact)
+        finally:
+            # Flush the buffer
+            self.flush()
+
     def sendall(self, buffer):
         # Add to buffer using send
         self.send(buffer)
-
-        # Flush the buffer
-        self.flush()
 
     def send(self, buffer):
         # Make sure buffer is initialized
