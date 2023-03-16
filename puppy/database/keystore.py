@@ -5,9 +5,165 @@ import functools
 from puppy.bunch import MutableBunchMapping, Mapping, Bunch
 from puppy.filesystem import remove
 from puppy.database.types import Index, Objects
+from puppy.typing.types import Hexadecimal
 
+class Keystore(object):
 
-class Keystore(MutableBunchMapping):
+    # Define default variable
+    _DEFAULT = object()
+
+    def __init__(self, path):
+        # Create directory if it does not exist
+        if not os.path.exists(path):
+            os.makedirs(path)
+        self.path = path
+
+    def __path__(self, key):
+        pass
+
+    def has(self, hashed):
+        return os.path.exists(os.path.join(self.path, hashed))
+
+    def store(self, key):
+        pass
+
+    def resolve(self, hashed):
+        # Make sure hash is valid
+        if not isinstance(hashed, Hexadecimal):
+            raise KeyError(hashed)
+
+        # Make sure hash exists
+        if not self.has(hashed):
+            raise KeyError(hashed)
+
+        # Read the value and return
+        with open()
+
+    def __contains__(self, key):
+        # Make sure file exists
+        return os.path.exists(self.__path__(key))
+
+    def __getitem__(self, key):
+        # Make sure key exists
+        if key not in self:
+            raise KeyError(key)
+
+        # Resolve path of object
+        path = self.__path__(key)
+
+        # Read file contents
+        with open(os.path.join(), "r") as file:
+            return json.load(file)
+
+    def __setitem__(self, key, value):
+        # Make sure value is JSON seriallizable
+        json.dumps(value)
+
+        # Resolve path of object
+        path = self.__path__(key)
+
+        # Write the object data as string
+        with open(path, "w") as file:
+            json.dump(value, file)
+
+    def __delitem__(self, key):
+        # Make sure key exists
+        if key not in self:
+            raise KeyError(key)
+
+        # Resolve path of object
+        path = self.__path__(key)
+
+        # Remove the target path
+        remove(path)
+
+    def __iter__(self):
+        # Read the index
+        for key in os.listdir(self.path):
+            # Yield all the keys
+            yield key
+
+    def __len__(self):
+        # Calculate the length of keys
+        return len(list(iter(self)))
+
+    def __eq__(self, other):
+        # Make sure the other object is a mapping
+        if not isinstance(other, Mapping):
+            return False
+
+        # Make sure all keys exist
+        if set(self.keys()) != set(other.keys()):
+            return False
+
+        # Make sure all the values equal
+        for key in self:
+            if self[key] != other[key]:
+                return False
+
+        # Comparison succeeded
+        return True
+
+    def __repr__(self):
+        # Format the data like a dictionary
+        return "{%s}" % ", ".join("%r: %r" % item for item in self.items())
+
+    def pop(self, key, default=_DEFAULT):
+        try:
+            # Fetch the value
+            value = self[key]
+
+            # Check if the value is a keystore
+            if isinstance(value, Keystore):
+                value = value.copy()
+
+            # Delete the item
+            del self[key]
+
+            # Return the value
+            return value
+        except KeyError:
+            # Check if a default is defined
+            if default != Keystore.DEFAULT:
+                return default
+
+            # Reraise exception
+            raise
+
+    def popitem(self):
+        # Convert self to list
+        keys = list(self)
+
+        # If the list is empty, raise
+        if not keys:
+            raise KeyError()
+
+        # Pop a key from the list
+        key = keys.pop()
+
+        # Return the key and the value
+        return key, self.pop(key)
+
+    def copy(self):
+        # Create initial bunch
+        output = Bunch()
+
+        # Loop over keys
+        for key in self:
+            # Fetch value of key
+            value = self[key]
+
+            # Check if value is a keystore
+            if isinstance(value, Keystore):
+                value = value.copy()
+
+            # Update the bunch
+            output[key] = value
+
+        # Return the created output
+        return output
+
+class Valuestore(MutableBunchMapping):
     # Define internal variables
     _index = None
     _objects = None
@@ -174,7 +330,6 @@ class Keystore(MutableBunchMapping):
 
         # Return the created output
         return output
-
 
 class Database(Keystore):
 
