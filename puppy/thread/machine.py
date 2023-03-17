@@ -3,7 +3,7 @@ import logging
 import functools
 import threading
 
-from puppy.thread.stoppable import Stoppable
+from puppy.thread.looper import Looper
 
 
 def state(function):
@@ -24,7 +24,7 @@ def state(function):
     return wrapper
 
 
-class Machine(Stoppable):
+class Machine(Looper):
 
     def __init__(self):
         # Initialize parent

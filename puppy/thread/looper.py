@@ -1,62 +1,93 @@
+import sys
+import logging
 import threading
 
-from puppy.thread.stoppable import Stoppable
 
-
-class Looper(Stoppable):
+class Looper(threading.Thread, object):
 
     def __init__(self):
-        # Initialize thread class
+        # Initialize parent
         super(Looper, self).__init__()
 
-        # Initialize internal variables
-        self._parent = None
+        # Create state objects
+        self.lock = threading.Lock()
 
-    def __enter__(self):
-        # Initialize self
-        self.initialize()
+        # Loop killswitch
+        self.event = threading.Event()
 
-    def __exit__(self, *args):
-        # Finalize self
-        self.finalize()
-        return False
+    def start(self, event=None):
+        # Update the event
+        # TODO: orevent
+        self.event = event or self.event
+
+        # Start the thread
+        super(Looper, self).start()
 
     def run(self):
-        # Use context manager
-        with self:
-            # Run inherited function
-            super(Looper, self).run()
+        try:
+            # Run initial initialization
+            self.initialize()
+
+            # Loop while not stopped
+            while not self.event.is_set():
+                # Aqcuire loop lock
+                with self.lock:
+                    timeout = self.loop()
+
+                # Sleep the required timeout
+                self.sleep(timeout)
+
+            # Stopped by event
+            logging.debug("Stopped by event")
+        except KeyboardInterrupt:
+            # Stopped by interrupt
+            logging.debug("Stopped by interrupt")
+        except:
+            # Log the exception
+            logging.error("Stopped by exception:", exc_info=sys.exc_info())
+        finally:
+            # Set the stop event
+            self.stop()
+
+            # Run final de-initialization
+            self.finalize()
+
+    def stop(self):
+        # Set the stop event
+        self.event.set()
 
     @property
     def stopped(self):
-        # Check if stoppable stopped
-        if super(Looper, self).stopped:
-            return True
+        # Check if thread is alive
+        return not self.is_alive()
 
-        # Check if parent is running
-        if self._parent:
-            if self._parent.stopped:
-                return True
+    def sleep(self, timeout):
+        # Make sure timeout is defined
+        if not timeout:
+            return
 
-        # Still running!
-        return False
+        # Sleep the required time
+        if self.event.wait(timeout):
+            # If the event was set, raise stop
+            raise KeyboardInterrupt()
 
-    def reset(self):
+    def restart(self):
         # Acquire the lock and restart
-        with self._lock:
+        with self.lock:
             # Finalize the looper
             self.finalize()
 
             # Initialize the looper
             self.initialize()
 
-    def adopt(self, parent):
-        # Set the new parent and return child
-        self._parent = parent
-        return self
+    def loop(self):
+        pass
 
     def initialize(self):
         pass
 
     def finalize(self):
         pass
+
+    def __repr__(self):
+        return "<%s name=%r stopped=%r>" % (self.__class__.__name__, self.name, self.stopped)
