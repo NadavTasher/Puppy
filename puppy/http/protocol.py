@@ -2,7 +2,11 @@
 from puppy.socket.wrapper import SocketWrapper, SocketReader, SocketWriter
 
 # Import required types
-from puppy.http.types import Received, Request, Response, Headers
+from puppy.http.types.headers import Headers
+from puppy.http.types.request import Request
+from puppy.http.types.response import Response
+from puppy.http.types.artifact import Received
+
 from puppy.http.constants import (
     CRLF,
     INTEGER,
@@ -52,15 +56,18 @@ class HTTPReader(HTTPSocket, SocketReader):
             name, value = line.split(SPEARATOR, 1)
             name, value = name.strip(), value.strip()
 
-            # Yield new header
-            headers.append(name, value)
+            # Append new header
+            if name not in headers:
+                headers[name] = value
+            else:
+                headers[name] += value
 
         # Return the headers object
         return headers
 
     def receive_content(self, headers, content_expected=True):
         # If a length is defined, fetch by length
-        if headers.has(CONTENT_LENGTH):
+        if CONTENT_LENGTH in headers:
             # Fetch content-length header
             (content_length,) = headers.pop(CONTENT_LENGTH)
 
@@ -68,7 +75,7 @@ class HTTPReader(HTTPSocket, SocketReader):
             return self.receive_content_by_length(int(content_length))
 
         # If encoding is defined, fetch by chunks
-        if headers.has(TRANSFER_ENCODING):
+        if TRANSFER_ENCODING in headers:
             # Fetch transfer-encoding header
             (transfer_encoding,) = headers.pop(TRANSFER_ENCODING)
 
@@ -79,7 +86,7 @@ class HTTPReader(HTTPSocket, SocketReader):
             return self.receive_content_by_chunks()
 
         # Make sure content-type is defined
-        if not headers.has(CONTENT_TYPE):
+        if CONTENT_TYPE not in headers:
             return
 
         # Make sure content is expected

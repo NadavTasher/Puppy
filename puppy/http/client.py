@@ -3,7 +3,8 @@ import socket
 
 from puppy.http.url import urlsplit
 from puppy.http.http import HTTP
-from puppy.http.types import Request, Headers
+from puppy.http.types.headers import Headers
+from puppy.http.types.request import Request
 from puppy.http.constants import GET, POST, COOKIE, SET_COOKIE, INTEGER
 
 try:
@@ -122,11 +123,11 @@ class HTTPClient(object):
         schema, host, port, path = urlsplit(url)
 
         # Add host header if required
-        if not headers.has(HOST):
+        if HOST not in headers:
             if not port:
-                headers.set(HOST, host)
+                headers[HOST] = host
             else:
-                headers.set(HOST, host + b":" + INTEGER % port)
+                headers[HOST] = host + b":" + INTEGER % port
 
         # Make sure port is defined
         schema = schema or SCHEMA_HTTP
