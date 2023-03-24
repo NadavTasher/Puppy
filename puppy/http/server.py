@@ -1,18 +1,8 @@
 import ssl
-import socket
 import contextlib
 
 from puppy.simple.http import SafeHTTP
 from puppy.socket.server import SocketServer, SocketWorker
-
-
-@contextlib.contextmanager
-def supress_socket_errors():
-    try:
-        # Yield for execution
-        yield
-    except socket.error as exception:
-        pass
 
 
 @contextlib.contextmanager
@@ -30,11 +20,6 @@ class HTTPHandler(SocketWorker):
     # Internal HTTP interface
     _class = SafeHTTP
     _interface = None
-
-    def run(self):
-        # Run loop with exception handlers
-        with supress_socket_errors():
-            super(HTTPHandler, self).run()
 
     def loop(self):
         # Check if interface was closed
@@ -68,17 +53,13 @@ class HTTPWorker(HTTPHandler):
 
 class HTTPSWorker(HTTPHandler):
 
-    def run(self):
-        # Run loop with exception handlers
-        with supress_certificate_errors():
-            super(HTTPSWorker, self).run()
-
     def initialize(self):
         # Initialize parent
         super(HTTPSWorker, self).initialize()
 
         # Wrap socket with SSL using parent's context
-        self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
+        with supress_certificate_errors():
+            self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
 
         # Initialize the interface
         self._interface = self._class(self._socket)
