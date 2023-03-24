@@ -24,8 +24,7 @@ class HTTPHandler(SocketWorker):
     def loop(self):
         # Check if interface was closed
         if self._interface.closed:
-            self.stop()
-            return
+            raise KeyboardInterrupt()
 
         # Check if interface is readable
         if not self._interface.wait(1):
