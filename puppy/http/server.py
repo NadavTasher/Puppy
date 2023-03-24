@@ -45,7 +45,7 @@ class HTTPWorker(HTTPHandler):
 
     def initialize(self):
         # Initialize parent
-        super(HTTPWorker, self).initialize()
+        HTTPHandler.initialize(self)
 
         # Initialize the interface
         self._interface = self._class(self._socket)
@@ -55,7 +55,7 @@ class HTTPSWorker(HTTPHandler):
 
     def initialize(self):
         # Initialize parent
-        super(HTTPSWorker, self).initialize()
+        HTTPHandler.initialize(self)
 
         # Wrap socket with SSL using parent's context
         with supress_certificate_errors():
