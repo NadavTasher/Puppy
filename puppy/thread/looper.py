@@ -17,7 +17,6 @@ class Looper(threading.Thread, object):
 
     def start(self, event=None):
         # Update the event
-        # TODO: orevent
         self.event = event or self.event
 
         # Start the thread
@@ -44,7 +43,7 @@ class Looper(threading.Thread, object):
             logging.debug("Stopped by interrupt")
         except:
             # Log the exception
-            logging.error("Stopped by exception:", exc_info=sys.exc_info())
+            logging.error("Stopped by exception", exc_info=sys.exc_info())
         finally:
             # Set the stop event
             self.stop()
