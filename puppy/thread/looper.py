@@ -45,9 +45,6 @@ class Looper(threading.Thread, object):
             # Log the exception
             logging.error("Stopped by exception", exc_info=sys.exc_info())
         finally:
-            # Set the stop event
-            self.stop()
-
             # Run final de-initialization
             self.finalize()
 
