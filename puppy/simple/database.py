@@ -3,8 +3,8 @@ import json
 import hashlib
 import functools
 
-from puppy.bunch import MutableBunchMapping, Mapping, Bunch
-from puppy.filesystem import remove
+from puppy.simple.bunch import MutableBunchMapping, Mapping, Bunch
+from puppy.simple.filesystem import remove
 
 
 class Keystore(MutableBunchMapping):

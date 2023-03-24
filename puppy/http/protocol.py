@@ -1,37 +1,21 @@
-# Import socket utilities
 from puppy.socket.wrapper import SocketWrapper, SocketReader, SocketWriter
-
-# Import required types
 from puppy.http.types.headers import Headers
 from puppy.http.types.request import Request
 from puppy.http.types.response import Response
 from puppy.http.types.artifact import Received
-
 from puppy.http.constants import (
     CRLF,
     INTEGER,
     SPEARATOR,
     WHITESPACE,
-    CLOSE,
     CHUNKED,
-    CONNECTION,
     CONTENT_TYPE,
     CONTENT_LENGTH,
     TRANSFER_ENCODING,
 )
 
 
-class HTTPSocket(SocketWrapper):
-
-    def __init__(self, *args, **kwargs):
-        # Initialize the parent
-        super(HTTPSocket, self).__init__(*args, **kwargs)
-
-        # Set the default separator
-        self._separator = CRLF
-
-
-class HTTPReader(HTTPSocket, SocketReader):
+class HTTPReader(SocketReader):
 
     def receive_artifact(self, content_expected=True):
         # Receive all artifact components
@@ -122,8 +106,14 @@ class HTTPReader(HTTPSocket, SocketReader):
         # Receive all data
         return self.recvall()
 
+    def readline(self, separator=CRLF):
+        return super(HTTPReader, self).readline(separator)
 
-class HTTPWriter(HTTPSocket, SocketWriter):
+    def readlines(self, separator=CRLF):
+        return super(HTTPReader, self).readlines(separator)
+
+
+class HTTPWriter(SocketWriter):
 
     def transmit_artifact(self, artifact):
         # Transmit all parts
@@ -154,6 +144,12 @@ class HTTPWriter(HTTPSocket, SocketWriter):
 
             # Send the content buffer
             self.sendall(content)
+
+    def writeline(self, line=bytes(), separator=CRLF):
+        return super(HTTPWriter, self).writeline(line, separator)
+
+    def writelines(self, lines, separator=CRLF):
+        return super(HTTPWriter, self).writelines(lines, separator)
 
 
 class HTTPReceiver(HTTPReader):

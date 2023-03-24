@@ -2,9 +2,7 @@ import ssl
 import socket
 import contextlib
 
-from puppy.http.http import HTTP
-from puppy.http.mixins import HTTPSafeReceiverMixIn
-
+from puppy.simple.http import SafeHTTP
 from puppy.socket.server import SocketServer, SocketWorker
 
 
@@ -28,12 +26,9 @@ def supress_certificate_errors():
             raise
 
 
-class HTTPClass(HTTP, HTTPSafeReceiverMixIn):
-    pass
-
-
 class HTTPHandler(SocketWorker):
     # Internal HTTP interface
+    _class = SafeHTTP
     _interface = None
 
     def run(self):
@@ -68,7 +63,7 @@ class HTTPWorker(HTTPHandler):
         super(HTTPWorker, self).initialize()
 
         # Initialize the interface
-        self._interface = HTTPClass(self._socket)
+        self._interface = self._class(self._socket)
 
 
 class HTTPSWorker(HTTPHandler):
@@ -86,7 +81,7 @@ class HTTPSWorker(HTTPHandler):
         self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
 
         # Initialize the interface
-        self._interface = HTTPClass(self._socket)
+        self._interface = self._class(self._socket)
 
 
 class HTTPServer(SocketServer):

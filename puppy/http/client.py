@@ -1,8 +1,9 @@
 import ssl
 import socket
 
+from puppy.simple.http import HTTP
+
 from puppy.http.url import urlsplit
-from puppy.http.http import HTTP
 from puppy.http.types.headers import Headers
 from puppy.http.types.request import Request
 from puppy.http.constants import GET, POST, COOKIE, SET_COOKIE, INTEGER

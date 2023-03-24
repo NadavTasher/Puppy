@@ -8,7 +8,6 @@ class SocketWrapper(object):
     def __init__(self, wrapped):
         # Set internal parameter
         self._chunk = 4096
-        self._separator = b"\n"
 
         # Set internal variables
         self._closed = False
@@ -106,20 +105,23 @@ class SocketWrapper(object):
 
 class SocketReader(SocketWrapper):
 
-    def readline(self):
+    def readuntil(self, needle):
         # Create a reading buffer
         buffer = bytes()
 
-        # Loop until CRLF in buffer
-        while self._separator not in buffer:
+        # Loop until needle in buffer
+        while needle not in buffer:
             buffer += self.recvexact(1)
 
         # Strip the buffer of the separator
-        return buffer[:-len(self._separator)]
+        return buffer[:-len(needle)]
 
-    def readlines(self):
+    def readline(self, separator):
+        return self.readuntil(separator)
+
+    def readlines(self, separator):
         # Read first line
-        line = self.readline()
+        line = self.readline(separator)
 
         # Loop while line is not empty
         while line:
@@ -127,20 +129,20 @@ class SocketReader(SocketWrapper):
             yield line
 
             # Read the next line
-            line = self.readline()
+            line = self.readline(separator)
 
 
 class SocketWriter(SocketWrapper):
 
-    def writeline(self, line=None):
+    def writeline(self, line, separator):
         # Write line if exists
         if line:
             self.sendall(line)
 
         # Write line separator
-        self.sendall(self._separator)
+        self.sendall(separator)
 
-    def writelines(self, lines=[]):
+    def writelines(self, lines, separator):
         # Loop over lines and send them
         for line in lines:
-            self.writeline(line)
+            self.writeline(line, separator)

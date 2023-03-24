@@ -1,8 +1,13 @@
+from puppy.http.types.headers import Headers
+
+
 class Artifact(object):
 
     def __init__(self, headers=None, content=None):
-        # Set the internal contents
-        self.headers = Headers(headers)
+        # Create artifact headers object
+        self.headers = Headers(headers or list())
+
+        # Assign artifact content
         self.content = content
 
     @property
