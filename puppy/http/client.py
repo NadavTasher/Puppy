@@ -6,7 +6,7 @@ from puppy.simple.http import HTTP
 from puppy.http.url import urlsplit
 from puppy.http.types.headers import Headers
 from puppy.http.types.request import Request
-from puppy.http.constants import GET, POST, COOKIE, SET_COOKIE, INTEGER
+from puppy.http.constants import GET, POST, COOKIE, SET_COOKIE, HOST, INTEGER
 
 try:
     # Python 2 quote and unquote
@@ -50,6 +50,10 @@ class HTTPClient(object):
         return request
 
     def _update_response(self, response):
+        # Check if response contains cookies
+        if SET_COOKIE not in response.headers:
+            return response
+
         # Update cookie jar with response headers
         for header in response.headers.pop(SET_COOKIE):
             # Check if semicolon exists

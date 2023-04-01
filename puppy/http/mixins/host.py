@@ -6,7 +6,7 @@ class HTTPHostTransmitterMixIn(HTTPTransmitter):
 
     def transmit_request(self, request):
         # Make sure no host header is defined
-        if HOST not in request.headers:
+        if HOST in request.headers:
             return super(HTTPHostTransmitterMixIn, self).transmit_request(request)
 
         # Get host from peername and encode
