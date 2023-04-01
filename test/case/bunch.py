@@ -1,6 +1,6 @@
 import unittest
 
-from puppy.bunch import Bunch
+from puppy.simple.bunch import Bunch
 
 
 class BunchTestCase(unittest.TestCase):
