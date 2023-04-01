@@ -2,7 +2,9 @@
 VERSION = 1.1
 
 # Operating constants
-CRLF = b"\r\n"
+CR = b"\r"
+LF = b"\n"
+CRLF = CR + LF
 INTEGER = b"%d"
 SPEARATOR = b":"
 WHITESPACE = b" "

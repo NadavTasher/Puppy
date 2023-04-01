@@ -10,7 +10,7 @@ import binascii
 from puppy.token.types import Token
 
 # Import general utilities
-from puppy.bunch import Bunch
+from puppy.simple.bunch import Bunch
 from puppy.typing.types import Bytes, Text, Union
 from puppy.typing.validator import validator
 

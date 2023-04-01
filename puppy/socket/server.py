@@ -4,7 +4,6 @@ import select
 from puppy.thread.looper import Looper
 
 SELECT_TIMEOUT = 0.5
-SOCKET_TIMEOUT = 10
 
 
 class SocketServer(Looper):
@@ -16,14 +15,6 @@ class SocketServer(Looper):
         # Set internal state
         self._servers = list()
         self._addresses = addresses
-
-    def create(self, address):
-        # Create new server socket
-        server = socket.socket()
-        server.bind(address)
-        server.listen(1)
-
-        return server
 
     def loop(self):
         # Check if socket is readable
@@ -38,15 +29,16 @@ class SocketServer(Looper):
             # Get address of socket
             address = readable_server.getsockname()
 
-            # Create new worker
-            worker = self._addresses[address](self, readable_server)
-            worker.start()
+            # Create new worker, hook it to the server and start
+            self._addresses[address](self, readable_server).start(self.event)
 
     def initialize(self):
         # Loop over addresses
         for address in self._addresses.keys():
-            # Create new server
-            server = self.create(address)
+            # Create new server socket
+            server = socket.socket()
+            server.bind(address)
+            server.listen(1)
 
             # Add server to list
             self._servers.append(server)

@@ -1,5 +1,5 @@
-from puppy.namedtuple import NamedTuple
-from puppy.typing.types import Any, Text, List, Dict, Optional
+from puppy.typing.types import Any, Text, List, Dict
+from puppy.simple.namedtuple import NamedTuple
 
 Token = NamedTuple(
     "Token",

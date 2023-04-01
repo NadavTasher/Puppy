@@ -1,51 +1,18 @@
 import ssl
-import socket
-import contextlib
 
-from puppy.http.http import HTTP
-from puppy.http.mixins import HTTPSafeReceiverMixIn
-
+from puppy.simple.http import SafeHTTP
 from puppy.socket.server import SocketServer, SocketWorker
-
-
-@contextlib.contextmanager
-def supress_socket_errors():
-    try:
-        # Yield for execution
-        yield
-    except socket.error as exception:
-        pass
-
-
-@contextlib.contextmanager
-def supress_certificate_errors():
-    try:
-        # Yield for execution
-        yield
-    except ssl.SSLError as exception:
-        # Check if message should be ignored
-        if not any(message in str(exception) for message in ["ALERT_CERTIFICATE_UNKNOWN"]):
-            raise
-
-
-class HTTPClass(HTTP, HTTPSafeReceiverMixIn):
-    pass
 
 
 class HTTPHandler(SocketWorker):
     # Internal HTTP interface
+    _class = SafeHTTP
     _interface = None
-
-    def run(self):
-        # Run loop with exception handlers
-        with supress_socket_errors():
-            super(HTTPHandler, self).run()
 
     def loop(self):
         # Check if interface was closed
         if self._interface.closed:
-            self.stop()
-            return
+            raise KeyboardInterrupt()
 
         # Check if interface is readable
         if not self._interface.wait(1):
@@ -65,28 +32,27 @@ class HTTPWorker(HTTPHandler):
 
     def initialize(self):
         # Initialize parent
-        super(HTTPWorker, self).initialize()
+        HTTPHandler.initialize(self)
 
         # Initialize the interface
-        self._interface = HTTPClass(self._socket)
+        self._interface = self._class(self._socket)
 
 
 class HTTPSWorker(HTTPHandler):
 
-    def run(self):
-        # Run loop with exception handlers
-        with supress_certificate_errors():
-            super(HTTPSWorker, self).run()
-
     def initialize(self):
         # Initialize parent
-        super(HTTPSWorker, self).initialize()
+        HTTPHandler.initialize(self)
 
-        # Wrap socket with SSL using parent's context
-        self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
+        try:
+            # Wrap socket with SSL using parent's context
+            self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
+        except ssl.SSLError:
+            # Raise exception to stop the handler
+            raise KeyboardInterrupt()
 
         # Initialize the interface
-        self._interface = HTTPClass(self._socket)
+        self._interface = self._class(self._socket)
 
 
 class HTTPServer(SocketServer):
@@ -101,4 +67,4 @@ class HTTPServer(SocketServer):
         # Initialize SSL context
         self.context = ssl.create_default_context()
         self.context.check_hostname = False
-        self.context.verify_mode = ssl.CERT_OPTIONAL
+        self.context.verify_mode = ssl.CERT_NONE

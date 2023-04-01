@@ -1,8 +1,8 @@
-# Import socket utilities
-from puppy.socket.wrapper import SocketWrapper, SocketReader, SocketWriter
-
-# Import required types
-from puppy.http.types import Received, Request, Response, Headers
+from puppy.socket.wrapper import SocketReader, SocketWriter
+from puppy.http.types.headers import Headers
+from puppy.http.types.request import Request
+from puppy.http.types.response import Response
+from puppy.http.types.artifact import Received
 from puppy.http.constants import (
     CRLF,
     INTEGER,
@@ -15,23 +15,13 @@ from puppy.http.constants import (
 )
 
 
-class HTTPSocket(SocketWrapper):
+class HTTPReader(SocketReader):
 
-    def __init__(self, *args, **kwargs):
-        # Initialize the parent
-        super(HTTPSocket, self).__init__(*args, **kwargs)
-
-        # Set the default separator
-        self._separator = CRLF
-
-
-class HTTPReader(HTTPSocket, SocketReader):
-
-    def receive_artifact(self):
+    def receive_artifact(self, content_expected=True):
         # Receive all artifact components
         header = self.readline()
         headers = self.receive_headers()
-        content = self.receive_content(headers)
+        content = self.receive_content(headers, content_expected)
 
         # Return created artifact
         return Received(header, headers, content)
@@ -50,15 +40,18 @@ class HTTPReader(HTTPSocket, SocketReader):
             name, value = line.split(SPEARATOR, 1)
             name, value = name.strip(), value.strip()
 
-            # Yield new header
-            headers.append(name, value)
+            # Append new header
+            if name not in headers:
+                headers[name] = value
+            else:
+                headers[name] += value
 
         # Return the headers object
         return headers
 
-    def receive_content(self, headers):
+    def receive_content(self, headers, content_expected=True):
         # If a length is defined, fetch by length
-        if headers.has(CONTENT_LENGTH):
+        if CONTENT_LENGTH in headers:
             # Fetch content-length header
             (content_length,) = headers.pop(CONTENT_LENGTH)
 
@@ -66,7 +59,7 @@ class HTTPReader(HTTPSocket, SocketReader):
             return self.receive_content_by_length(int(content_length))
 
         # If encoding is defined, fetch by chunks
-        if headers.has(TRANSFER_ENCODING):
+        if TRANSFER_ENCODING in headers:
             # Fetch transfer-encoding header
             (transfer_encoding,) = headers.pop(TRANSFER_ENCODING)
 
@@ -77,17 +70,12 @@ class HTTPReader(HTTPSocket, SocketReader):
             return self.receive_content_by_chunks()
 
         # Make sure content-type is defined
-        if not headers.has(CONTENT_TYPE):
+        if CONTENT_TYPE not in headers:
             return
 
-        # Make sure connection is defined
-        if not headers.has(CONNECTION):
+        # Make sure content is expected
+        if not content_expected:
             return
-
-        # Make sure connection will close
-        for connection in headers.get(CONNECTION):
-            if connection.lower() != CLOSE:
-                return
 
         # Receive content until socket is closed
         return self.receive_content_by_stream()
@@ -118,8 +106,14 @@ class HTTPReader(HTTPSocket, SocketReader):
         # Receive all data
         return self.recvall()
 
+    def readline(self, separator=CRLF):
+        return super(HTTPReader, self).readline(separator)
 
-class HTTPWriter(HTTPSocket, SocketWriter):
+    def readlines(self, separator=CRLF):
+        return super(HTTPReader, self).readlines(separator)
+
+
+class HTTPWriter(SocketWriter):
 
     def transmit_artifact(self, artifact):
         # Transmit all parts
@@ -133,8 +127,9 @@ class HTTPWriter(HTTPSocket, SocketWriter):
 
     def transmit_headers(self, headers):
         # Loop over headers and transmit them
-        for name, value in headers:
-            self.transmit_header(name, value)
+        for name, values in headers.items():
+            for value in values:
+                self.transmit_header(name, value)
 
     def transmit_content(self, content):
         # Check if content should be sent
@@ -151,12 +146,18 @@ class HTTPWriter(HTTPSocket, SocketWriter):
             # Send the content buffer
             self.sendall(content)
 
+    def writeline(self, line=bytes(), separator=CRLF):
+        return super(HTTPWriter, self).writeline(line, separator)
+
+    def writelines(self, lines, separator=CRLF):
+        return super(HTTPWriter, self).writelines(lines, separator)
+
 
 class HTTPReceiver(HTTPReader):
 
     def receive_request(self):
         # Receive artifact from parent
-        artifact = self.receive_artifact()
+        artifact = self.receive_artifact(content_expected=False)
 
         # Parse HTTP header as request header
         method, location, _ = artifact.header.split(WHITESPACE, 2)
@@ -166,7 +167,7 @@ class HTTPReceiver(HTTPReader):
 
     def receive_response(self):
         # Receive artifact from parent
-        artifact = self.receive_artifact()
+        artifact = self.receive_artifact(content_expected=True)
 
         # Parse HTTP header as response header
         _, status, message = artifact.header.split(WHITESPACE, 2)
