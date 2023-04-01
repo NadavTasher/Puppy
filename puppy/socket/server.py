@@ -33,7 +33,11 @@ class SocketServer(Looper):
             self._addresses[address](self, readable_server).start(self.event)
 
     def initialize(self):
-        # Loop over addresses
+        # Check if should bind sockets
+        if self._servers:
+            return
+
+        # Loop over addresses and bind sockets
         for address in self._addresses.keys():
             # Create new server socket
             server = socket.socket()
@@ -64,11 +68,15 @@ class SocketWorker(Looper):
         self._server = server
 
     def initialize(self):
-        # Accept new connection
-        self._socket, address = self._server.accept()
+        try:
+            # Accept new connection
+            self._socket, address = self._server.accept()
 
-        # Set new name
-        self.name = "%s:%d" % address
+            # Set new name
+            self.name = "%s:%d" % address
+        except (OSError, IOError):
+            # Raise keyboard-interrupt to stop
+            raise KeyboardInterrupt()
 
     def finalize(self):
         # Close socket connection
