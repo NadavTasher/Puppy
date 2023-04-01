@@ -1,4 +1,4 @@
-from puppy.socket.wrapper import SocketWrapper, SocketReader, SocketWriter
+from puppy.socket.wrapper import SocketReader, SocketWriter
 from puppy.http.types.headers import Headers
 from puppy.http.types.request import Request
 from puppy.http.types.response import Response
@@ -129,7 +129,7 @@ class HTTPWriter(SocketWriter):
         # Loop over headers and transmit them
         for name, values in headers.items():
             for value in values:
-                self.transmit_header(name, value)            
+                self.transmit_header(name, value)
 
     def transmit_content(self, content):
         # Check if content should be sent

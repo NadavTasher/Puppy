@@ -1,19 +1,7 @@
 import ssl
-import contextlib
 
 from puppy.simple.http import SafeHTTP
 from puppy.socket.server import SocketServer, SocketWorker
-
-
-@contextlib.contextmanager
-def supress_certificate_errors():
-    try:
-        # Yield for execution
-        yield
-    except ssl.SSLError as exception:
-        # Check if message should be ignored
-        if not any(message in str(exception) for message in ["ALERT_CERTIFICATE_UNKNOWN"]):
-            raise
 
 
 class HTTPHandler(SocketWorker):
@@ -56,9 +44,12 @@ class HTTPSWorker(HTTPHandler):
         # Initialize parent
         HTTPHandler.initialize(self)
 
-        # Wrap socket with SSL using parent's context
-        with supress_certificate_errors():
+        try:
+            # Wrap socket with SSL using parent's context
             self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
+        except ssl.SSLError:
+            # Raise exception to stop the handler
+            raise KeyboardInterrupt()
 
         # Initialize the interface
         self._interface = self._class(self._socket)
