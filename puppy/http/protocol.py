@@ -127,8 +127,9 @@ class HTTPWriter(SocketWriter):
 
     def transmit_headers(self, headers):
         # Loop over headers and transmit them
-        for name, value in headers:
-            self.transmit_header(name, value)
+        for name, values in headers.items():
+            for value in values:
+                self.transmit_header(name, value)            
 
     def transmit_content(self, content):
         # Check if content should be sent

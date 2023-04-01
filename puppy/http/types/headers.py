@@ -45,11 +45,5 @@ class Headers(collections.OrderedDict):
         # Convert name to lower-case
         return super(Headers, self).__delitem__(self._to_name(key))
 
-    def __iter__(self):
-        # Loop over values and yield
-        for key, values in self.items():
-            for value in values:
-                yield key, value
-
     def __repr__(self):
         return "%s(%r)" % (self.__class__.__name__, list(self))
