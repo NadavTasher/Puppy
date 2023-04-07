@@ -4,7 +4,7 @@
 export PYTHONPATH=.
 
 # - Run tests for Python 2
-python2 test
+python2 tests
 
 # - Run tests for Python 3
-python3 test
+python3 tests
