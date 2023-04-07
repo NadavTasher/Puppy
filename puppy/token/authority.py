@@ -8,6 +8,7 @@ import binascii
 
 # Import token types
 from puppy.token.types import Token
+from puppy.token.exceptions import PermissionError, SignatureError, ExpirationError
 
 # Import general utilities
 from puppy.simple.bunch import Bunch
@@ -77,18 +78,22 @@ class Authority(object):
         token_string, token_hmac = token_buffer[:-SIGNATURE], token_buffer[-SIGNATURE:]
 
         # Validate HMAC of buffer
-        assert (hmac.new(self._secret, token_string, hashlib.sha256).digest() == token_hmac), "Token HMAC is invalid"
+        if hmac.new(self._secret, token_string, hashlib.sha256).digest() != token_hmac:
+            raise SignatureError("Token HMAC is invalid")
 
         # Decode string to token object
         token_object = Token(*json.loads(token_string.decode()))
 
         # Validate the expiration dates
-        assert token_object.timestamp < time.time(), "Token timestamp is invalid"
-        assert token_object.validity > time.time(), "Token validity is expired"
+        if token_object.timestamp > time.time():
+            raise ExpirationError("Token timestamp is invalid")
+        if token_object.validity < time.time():
+            raise ExpirationError("Token validity is expired")
 
         # Validate permissions
         for permission in permissions:
-            assert permission in token_object.permissions, ("Token is missing the %r permission" % permission)
+            if permission not in token_object.permissions:
+                raise PermissionError("Token is missing the %r permission" % permission)
 
         # Replace contents with bunch
         token_object = token_object._replace(contents=Bunch(token_object.contents))
