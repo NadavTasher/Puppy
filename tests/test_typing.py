@@ -1,6 +1,15 @@
 import unittest
+import contextlib
 
 from puppy.typing.types import *
+from puppy.typing.check import *
+
+@contextlib.contextmanager
+def suppress(*exceptions):
+    try:
+        yield
+    except exceptions:
+        pass
 
 
 class TypingTestCase(unittest.TestCase):
@@ -91,3 +100,16 @@ class TypingTestCase(unittest.TestCase):
     def test_hexadecimal(self):
         assert isinstance("badc0ffe", Hexadecimal)
         assert not isinstance("badcoffe", Hexadecimal)
+
+    def test_kwargcheck(self):
+        
+        @kwargcheck(integer=int)
+        def target(integer):
+            pass
+
+        # Test with good argument
+        target(integer=42)
+
+        with suppress(TypeError):
+            # Test with bad argument
+            target(integer=None)
