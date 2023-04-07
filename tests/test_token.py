@@ -3,8 +3,8 @@ import unittest
 
 from utilities import *
 
-from puppy.token.authority import *
-from puppy.token.exceptions import *
+from puppy.token.authority import Authority
+from puppy.token.exceptions import PermissionError, ExpirationError, SignatureError
 
 
 class TokenTestCase(unittest.TestCase):
