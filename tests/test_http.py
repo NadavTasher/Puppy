@@ -7,6 +7,7 @@ from puppy.simple.http import SafeHTTP
 from puppy.http.client import HTTPClient
 from puppy.http.server import HTTPServer
 from puppy.http.router import HTTPRouter
+from puppy.http.types.headers import Headers
 from puppy.http.types.response import Response
 
 
@@ -79,3 +80,10 @@ class HTTPClientTestCase(unittest.TestCase):
         # Send a test request
         response = client.get(b"https://github.com/")
         assert response.status == 200, response
+
+    def test_headers(self):
+        headers = Headers()
+        headers[b"Hello"] = b"World"
+        assert eval(repr(headers))[b"Hello"] == [b"World"]
+        headers[b"hello"] += b"Test"
+        assert dict(eval(repr(headers))) == dict(Headers([(b"Hello", [b"World", b"Test"])]))

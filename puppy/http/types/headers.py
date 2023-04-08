@@ -4,11 +4,7 @@ import collections
 class Vector(list):
 
     def __iadd__(self, item):
-        # Append item to list
-        self.append(item)
-
-        # Return self
-        return self
+        return super(Vector, self).__iadd__([item])
 
 
 class Headers(collections.OrderedDict):
@@ -18,7 +14,7 @@ class Headers(collections.OrderedDict):
         name = bytes(key)
 
         # Loop over keys and find matching key
-        for other in self.keys():
+        for other in self:
             if other.lower() == name.lower():
                 return other
 
@@ -30,9 +26,12 @@ class Headers(collections.OrderedDict):
         return super(Headers, self).__contains__(self._to_name(key))
 
     def __setitem__(self, key, value):
-        # Make sure value is a list
-        if not isinstance(value, Vector):
-            value = Vector([value])
+        # Convert item to vector
+        if not isinstance(value, list):
+            value = [value]
+
+        # Convert value to vector
+        value = Vector(value)
 
         # Convert name to lower-case
         return super(Headers, self).__setitem__(self._to_name(key), value)
@@ -44,6 +43,3 @@ class Headers(collections.OrderedDict):
     def __delitem__(self, key):
         # Convert name to lower-case
         return super(Headers, self).__delitem__(self._to_name(key))
-
-    def __repr__(self):
-        return "%s(%r)" % (self.__class__.__name__, list(self))
