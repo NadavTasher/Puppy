@@ -2,6 +2,8 @@ import sys
 import logging
 import threading
 
+from puppy.thread.event import Event, select
+
 
 class Looper(threading.Thread, object):
 
@@ -13,11 +15,13 @@ class Looper(threading.Thread, object):
         self.lock = threading.Lock()
 
         # Loop killswitch
-        self.event = threading.Event()
+        self.event = Event()
+        self.events = [self.event]
 
     def start(self, event=None):
         # Update the event
-        self.event = event or self.event
+        if event:
+            self.events.append(event)
 
         # Start the thread
         super(Looper, self).start()
@@ -28,7 +32,7 @@ class Looper(threading.Thread, object):
             self.initialize()
 
             # Loop while not stopped
-            while not self.event.is_set():
+            while not select(self.events, 0):
                 # Aqcuire loop lock
                 with self.lock:
                     timeout = self.loop()
@@ -57,13 +61,24 @@ class Looper(threading.Thread, object):
         # Check if thread is alive
         return not self.is_alive()
 
+    def select(self, events, timeout):
+        # Select on all events
+        ready = select(self.events + events, timeout)
+
+        # Check if any of the exit events are set
+        if any(event in ready for event in self.events):
+            raise KeyboardInterrupt()
+
+        # Return whether any of the additional events were set
+        return any(event in ready for event in events)
+
     def sleep(self, timeout):
         # Make sure timeout is defined
         if not timeout:
             return
 
         # Sleep the required time
-        if self.event.wait(timeout):
+        if select(self.events, timeout):
             # If the event was set, raise stop
             raise KeyboardInterrupt()
 
