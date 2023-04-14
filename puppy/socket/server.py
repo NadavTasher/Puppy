@@ -18,19 +18,15 @@ class SocketServer(Looper):
 
     def loop(self):
         # Check if socket is readable
-        readable_servers, _, _ = select.select(self._servers, [], [], SELECT_TIMEOUT)
-
-        # Make sure socket is ready
-        if not readable_servers:
-            return
+        servers, _, _ = select.select(self._servers, [], [], SELECT_TIMEOUT)
 
         # Create a new worker for each socket
-        for readable_server in readable_servers:
+        for server in servers:
             # Get address of socket
-            address = readable_server.getsockname()
+            address = server.getsockname()
 
             # Create new worker, hook it to the server and start
-            self._addresses[address](self, readable_server).start(self.event)
+            self._addresses[address](self, server).start(self.event)
 
     def initialize(self):
         # Check if should bind sockets

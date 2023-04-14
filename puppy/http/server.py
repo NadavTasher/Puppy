@@ -47,7 +47,7 @@ class HTTPSWorker(HTTPHandler):
         try:
             # Wrap socket with SSL using parent's context
             self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
-        except ssl.SSLError:
+        except (ssl.SSLError, OSError):
             # Raise exception to stop the handler
             raise KeyboardInterrupt()
 
