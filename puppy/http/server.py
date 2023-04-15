@@ -10,22 +10,26 @@ class HTTPHandler(SocketWorker):
     _interface = None
 
     def loop(self):
-        # Check if interface was closed
-        if self._interface.closed:
+        try:
+            # Check if interface was closed
+            if self._interface.closed:
+                raise IOError()
+
+            # Check if interface is readable
+            if not self.select([self._socket], 1):
+                return
+
+            # Read request from client
+            request = self._interface.receive_request()
+
+            # Handle client request
+            response = self._parent.handler(request)
+
+            # Transmit response to client
+            self._interface.transmit_response(response)
+        except IOError:
+            # Stop the worker
             raise KeyboardInterrupt()
-
-        # Check if interface is readable
-        if not self._interface.wait(1):
-            return
-
-        # Read request from client
-        request = self._interface.receive_request()
-
-        # Handle client request
-        response = self._parent.handler(request)
-
-        # Transmit response to client
-        self._interface.transmit_response(response)
 
 
 class HTTPWorker(HTTPHandler):

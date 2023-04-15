@@ -3,8 +3,6 @@ import select
 
 from puppy.thread.looper import Looper
 
-SELECT_TIMEOUT = 0.5
-
 
 class SocketServer(Looper):
 
@@ -18,7 +16,7 @@ class SocketServer(Looper):
 
     def loop(self):
         # Check if socket is readable
-        servers = self.select(self._servers, SELECT_TIMEOUT)
+        servers = self.select(self._servers, 1)
 
         # Create a new worker for each socket
         for server in servers:

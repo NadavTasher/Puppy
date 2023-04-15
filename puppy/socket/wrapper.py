@@ -35,7 +35,7 @@ class SocketWrapper(object):
 
             # Make sure something was read to the temporary buffer
             if not temporary:
-                raise socket.error("Closed on remote")
+                raise IOError()
 
             # Append to buffer
             buffer += temporary
@@ -46,15 +46,17 @@ class SocketWrapper(object):
     def recvall(self, timeout=5):
         # Initialize reading buffer
         buffer = bytes()
-        temporary = True
+
+        # Receive the first chunk
+        temporary = self.recv(self._chunk)
 
         # Loop until nothing left to read
         while temporary and self.wait(timeout):
-            # Read new temporary chunk
-            temporary = self.recv(self._chunk)
-
             # Append chunk to buffer
             buffer += temporary
+
+            # Read next chunk
+            temporary = self.recv(self._chunk)
 
         # Return the buffer
         return buffer
