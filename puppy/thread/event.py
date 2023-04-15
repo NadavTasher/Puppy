@@ -1,3 +1,5 @@
+import os
+import fcntl
 import threading
 import contextlib
 
@@ -47,6 +49,40 @@ class Event(_Event):
                     event.targets.remove(self)
 
 
+class PipeEvent(Event):
+
+    def __init__(self, *args, **kwargs):
+        # Initialize the parent
+        super(Event, self).__init__(*args, **kwargs)
+
+        # Create read and write pipes
+        self.rfile, self.wfile = os.pipe()
+
+        # Set read pipe non-blocking
+        fcntl.fcntl(self.rfile, fcntl.F_SETFL, os.O_NONBLOCK)
+
+    def set(self, *args, **kwargs):
+        # Set the parent
+        super(Event, self).set(*args, **kwargs)
+
+        # Write some data to the file
+        os.write(self.wfile, bytearray(1))
+
+    def clear(self, *args, **kwargs):
+        # Clear the parent
+        super(Event, self).clear(*args, **kwargs)
+
+        # Read all data from file
+        try:
+            while os.read(self.rfile, 1):
+                pass
+        except OSError:
+            pass
+
+    def fileno(self):
+        return self.rfile
+
+
 def select(events, timeout):
     # Wait on events
     wait_on_events(events, timeout)
@@ -56,6 +92,11 @@ def select(events, timeout):
 
 
 def wait_on_events(events, timeout):
+    # Make sure all events are our type
+    for event in events:
+        if not isinstance(event, Event):
+            raise TypeError()
+
     # Make sure event list is not empty
     if not events:
         return

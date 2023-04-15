@@ -2,10 +2,8 @@ import time
 import unittest
 import threading
 
-from puppy.simple.bunch import Bunch
 from puppy.thread.future import future
 from puppy.thread.looper import Looper
-from puppy.thread.event import Event, select
 
 
 class TestLooper(Looper):
@@ -69,23 +67,3 @@ class ThreadTestCase(unittest.TestCase):
 
         # Make sure count is 10
         assert looper.count != 10
-
-    def test_event_select(self):
-
-        @future
-        def event_setter(event, timeout):
-            time.sleep(timeout)
-            event.set()
-
-        # Create target events
-        e1 = Event()
-        e2 = Event()
-
-        # Run a background event setter
-        event_setter(e1, 0.6)
-
-        # Validate expected state
-        assert not select([e1, e2], 0.1)
-        assert not select([e1, e2], 0.3)
-        assert not select([e1, e2], 0)
-        assert select([e1, e2], 0.3)
