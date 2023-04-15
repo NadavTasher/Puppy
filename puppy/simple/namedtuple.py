@@ -1,7 +1,5 @@
-# Import collections for namedtuple
 import collections
 
-# Import types for type checking
 from puppy.typing.types import Any, List, Tuple
 
 
