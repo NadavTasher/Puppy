@@ -61,16 +61,16 @@ class Looper(threading.Thread, object):
         # Check if thread is alive
         return not self.is_alive()
 
-    def select(self, events, timeout):
+    def select(self, objects, timeout):
         # Select on all events
-        ready = select(self.events + events, timeout)
+        ready = select(self.events + objects, timeout)
 
         # Check if any of the exit events are set
         if any(event in ready for event in self.events):
             raise KeyboardInterrupt()
 
-        # Return whether any of the additional events were set
-        return any(event in ready for event in events)
+        # Return the list of set items
+        return ready
 
     def sleep(self, timeout):
         # Make sure timeout is defined

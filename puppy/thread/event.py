@@ -3,11 +3,13 @@ import fcntl
 import threading
 import contextlib
 
+from select import select as select_on_files
+
 try:
-    # Python2 threading event type
+    # Python 2 threading event type
     _Event = threading._Event
 except:
-    # Python3 threading event type
+    # Python 3 threading event type
     _Event = threading.Event
 
 
@@ -20,20 +22,45 @@ class Event(_Event):
         # Initialize the target set
         self.targets = set()
 
-    def set(self, *args, **kwargs):
+        # Initialize the file descriptors
+        self.rfile, self.wfile = None, None
+
+    def set(self):
         # Set the parent
-        super(Event, self).set(*args, **kwargs)
+        super(Event, self).set()
 
         # Set all target events
         while self.targets:
-            self.targets.pop().set(*args, **kwargs)
+            self.targets.pop().set()
+
+        # Make sure pipe is defined
+        if not self.wfile:
+            return
+
+        # Write some data to the file
+        os.write(self.wfile, bytearray(1))
+
+    def clear(self):
+        # Clear the parent
+        super(Event, self).clear()
+
+        # Make sure pipe is defined
+        if not self.rfile:
+            return
+
+        try:
+            # Read all data from file
+            while os.read(self.rfile, 1):
+                pass
+        except OSError:
+            # Suppress this error
+            return
 
     @contextlib.contextmanager
     def hook(self, events):
         # Make sure all events are of this type
-        for event in events:
-            if not isinstance(event, Event):
-                raise TypeError()
+        if not all(isinstance(event, Event) for event in events):
+            raise TypeError()
 
         try:
             # Add our event to the target list
@@ -48,55 +75,48 @@ class Event(_Event):
                 if self in event.targets:
                     event.targets.remove(self)
 
+    def fileno(self):
+        # Check if read descriptor exists
+        if self.rfile:
+            return self.rfile
 
-class PipeEvent(Event):
-
-    def __init__(self, *args, **kwargs):
-        # Initialize the parent
-        super(Event, self).__init__(*args, **kwargs)
-
-        # Create read and write pipes
+        # Create a new pipe
         self.rfile, self.wfile = os.pipe()
 
-        # Set read pipe non-blocking
+        # Check if the event is set
+        if self.is_set():
+            # Write some data to the file
+            os.write(self.wfile, bytearray(1))
+
+        # Set read descriptor non-blocking
         fcntl.fcntl(self.rfile, fcntl.F_SETFL, os.O_NONBLOCK)
 
-    def set(self, *args, **kwargs):
-        # Set the parent
-        super(Event, self).set(*args, **kwargs)
-
-        # Write some data to the file
-        os.write(self.wfile, bytearray(1))
-
-    def clear(self, *args, **kwargs):
-        # Clear the parent
-        super(Event, self).clear(*args, **kwargs)
-
-        # Read all data from file
-        try:
-            while os.read(self.rfile, 1):
-                pass
-        except OSError:
-            pass
-
-    def fileno(self):
+        # Return the read descriptor
         return self.rfile
 
+    def __del__(self):
+        # Check if a read descriptor is defined
+        if self.rfile:
+            os.close(self.rfile)
 
-def select(events, timeout):
-    # Wait on events
-    wait_on_events(events, timeout)
+        # Check if a write descriptor is defined
+        if self.wfile:
+            os.close(self.wfile)
 
-    # Return a list of all set events
-    return [event for event in events if event.is_set()]
+
+def select(objects, timeout):
+    # Check if not all objects are events
+    if all(isinstance(item, Event) for item in objects):
+        return select_on_events(objects, timeout)
+
+    # Select using system select
+    ready, _, _ = select_on_files(objects, [], [], timeout)
+
+    # Return the ready objects
+    return ready
 
 
 def wait_on_events(events, timeout):
-    # Make sure all events are our type
-    for event in events:
-        if not isinstance(event, Event):
-            raise TypeError()
-
     # Make sure event list is not empty
     if not events:
         return
@@ -111,3 +131,11 @@ def wait_on_events(events, timeout):
     # Hook all of the given events
     with target.hook(events):
         target.wait(timeout)
+
+
+def select_on_events(events, timeout):
+    # Wait on events
+    wait_on_events(events, timeout)
+
+    # Return a list of all set events
+    return [event for event in events if event.is_set()]

@@ -18,7 +18,7 @@ class SocketServer(Looper):
 
     def loop(self):
         # Check if socket is readable
-        servers, _, _ = select.select(self._servers, [], [], SELECT_TIMEOUT)
+        servers = self.select(self._servers, SELECT_TIMEOUT)
 
         # Create a new worker for each socket
         for server in servers:
