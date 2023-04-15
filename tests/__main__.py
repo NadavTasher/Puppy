@@ -1,6 +1,7 @@
 import unittest
 
 from test_bunch import *
+from test_database import *
 from test_http import *
 from test_process import *
 from test_thread import *
