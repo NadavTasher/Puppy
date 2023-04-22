@@ -1,5 +1,4 @@
 import os
-import fcntl
 import threading
 import contextlib
 
@@ -48,13 +47,9 @@ class Event(_Event):
         if not self.rfile:
             return
 
-        try:
-            # Read all data from file
-            while os.read(self.rfile, 1):
-                pass
-        except OSError:
-            # Suppress this error
-            return
+        # Read all data from file
+        while select([self.rfile], 0):
+            os.read(self.rfile, 1)
 
     @contextlib.contextmanager
     def hook(self, events):
@@ -87,9 +82,6 @@ class Event(_Event):
         if self.is_set():
             # Write some data to the file
             os.write(self.wfile, bytearray(1))
-
-        # Set read descriptor non-blocking
-        fcntl.fcntl(self.rfile, fcntl.F_SETFL, os.O_NONBLOCK)
 
         # Return the read descriptor
         return self.rfile
