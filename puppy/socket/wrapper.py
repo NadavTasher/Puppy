@@ -13,6 +13,9 @@ class SocketWrapper(object):
         self._closed = False
         self._socket = wrapped
 
+    def fileno(self):
+        return self._socket.fileno()
+
     @property
     def closed(self):
         return self._closed
@@ -81,17 +84,6 @@ class SocketWrapper(object):
 
             # Remove the chunk from the buffer
             buffer = buffer[self._chunk:]
-
-    def abort(self):
-        # Skip if already closed
-        if self.closed:
-            return
-
-        # Set the linger socket option
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
-
-        # Close the socket
-        self.close()
 
     def close(self):
         # Skip if already closed
