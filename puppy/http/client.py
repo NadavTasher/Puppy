@@ -1,11 +1,12 @@
 import ssl
 import socket
+import contextlib
 
 from puppy.simple.http import HTTP
 
 from puppy.http.url import urlsplit
-from puppy.http.types.headers import Headers
-from puppy.http.types.request import Request
+from puppy.http.headers import Headers
+from puppy.http.request import Request
 from puppy.http.constants import GET, POST, COOKIE, SET_COOKIE, HOST, INTEGER
 
 try:
@@ -31,7 +32,6 @@ class HTTPClient(object):
         self.cookies = dict()
         self.headers = list()
         self.history = list()
-        self.interfaces = dict()
 
     def _update_request(self, request):
         # Set cookies header
@@ -78,47 +78,36 @@ class HTTPClient(object):
         # Return the response
         return response
 
+    @contextlib.contextmanager
+    def _create_connection(self, host, port, tls=False):
+        # Create a socket
+        connection = socket.socket()
+        connection.connect((host, port))
+
+        # Wrap socket if needed
+        if tls:
+            # Wrap connection with SSL
+            context = ssl.create_default_context()
+
+            # Disable certificate check
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+
+            # Wrap connection using context
+            connection = context.wrap_socket(connection, server_hostname=host)
+
+        try:
+            # Yield the socket
+            yield connection
+        finally:
+            # Close the connection
+            connection.close()
+
     def get(self, url, *args, **kwargs):
         return self.request(GET, url, *args, **kwargs)
 
     def post(self, url, *args, **kwargs):
         return self.request(POST, url, *args, **kwargs)
-
-    def wrap(self, connection, host=None):
-        # Wrap connection with SSL
-        context = ssl.create_default_context()
-
-        # Disable certificate check
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-
-        # Wrap connection using context
-        return context.wrap_socket(connection, server_hostname=host)
-
-    def interface(self, host, port, tls=False):
-        # Determine address of host
-        address = socket.gethostbyname(host), port
-
-        # Check if interface is closed and remove it
-        if address in self.interfaces:
-            if self.interfaces[address].closed:
-                del self.interfaces[address]
-
-        # Check if interface already exists
-        if address not in self.interfaces:
-            # Connect to socket
-            connection = socket.socket()
-            connection.connect(address)
-
-            # Wrap with TLS connection if needed
-            if tls:
-                connection = self.wrap(connection, host)
-
-            # Create client interface
-            self.interfaces[address] = self.implementation(connection)
-
-        # Return interface for address
-        return self.interfaces[address]
 
     def request(self, method, url, headers=[], body=None):
         # Create headers object
@@ -138,22 +127,20 @@ class HTTPClient(object):
         schema = schema or SCHEMA_HTTP
         port = port or SCHEMA_MAPPING[schema]
 
-        # Get interface for request by address and update host
-        interface = self.interface(host, port, schema == SCHEMA_HTTPS)
+        # Create the interface
+        interface = self.implementation()
 
         # Create request object
         request = Request(method, path or b"/", headers, body)
-
-        # Update the request
         request = self._update_request(request)
 
-        # Send request using client
-        interface.transmit_request(request)
+        # Get interface for request by address and update host
+        with self._create_connection(host, port, schema == SCHEMA_HTTPS) as connection:
+            # Send request and receive response
+            interface.transmit_request(connection, request)
+            response = interface.receive_response(connection)
 
-        # Receive response using client
-        response = interface.receive_response()
-
-        # Update the response
+        # Update the cookies
         response = self._update_response(response)
 
         # Add new history item

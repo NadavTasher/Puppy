@@ -1,55 +1,57 @@
 import socket
-import select
 
 from puppy.thread.looper import Looper
 
 
 class SocketServer(Looper):
 
-    def __init__(self, addresses):
+    def __init__(self, workers):
         # Initialize parent
         super(SocketServer, self).__init__()
 
         # Set internal state
-        self._servers = list()
-        self._addresses = addresses
+        self.servers = dict()
+        self.workers = workers
 
     def loop(self):
-        # Check if socket is readable
-        servers = self.select(self._servers, 1)
+        # Accept a client for each ready server
+        for server in self.select(list(self.servers.keys()), 1):
+            try:
+                # Accept the new client
+                connection, address = server.accept()
 
-        # Create a new worker for each socket
-        for server in servers:
-            # Get address of socket
-            address = server.getsockname()
-
-            # Create new worker, hook it to the server and start
-            self._addresses[address](self, server).start(self.event)
+                # Create a new worker
+                worker = self.servers[server](self, connection)
+                worker.name = "%s:%d" % address
+                worker.start(self.event)
+            except (OSError, IOError):
+                # Ignore accept errors
+                pass
 
     def initialize(self):
         # Check if should bind sockets
-        if self._servers:
+        if self.servers:
             return
 
         # Loop over addresses and bind sockets
-        for address in self._addresses.keys():
+        for address, implementation in self.workers.items():
             # Create new server socket
             server = socket.socket()
             server.bind(address)
             server.listen(1)
 
             # Add server to list
-            self._servers.append(server)
+            self.servers[server] = implementation
 
     def finalize(self):
         # Close all servers
-        for server in self._servers:
+        for server in self.servers:
             server.close()
 
 
 class SocketWorker(Looper):
 
-    def __init__(self, parent, server):
+    def __init__(self, parent, socket):
         # Initialize parent
         super(SocketWorker, self).__init__()
 
@@ -57,22 +59,29 @@ class SocketWorker(Looper):
         self.daemon = True
 
         # Store connection internally
-        self._socket = None
-        self._parent = parent
-        self._server = server
+        self.parent = parent
+        self.socket = socket
 
-    def initialize(self):
+    def handle(self):
+        raise NotImplementedError()
+
+    def loop(self):
         try:
-            # Accept new connection
-            self._socket, address = self._server.accept()
+            # Check if socket is readable
+            if not self.select([self.socket], 1):
+                return
 
-            # Set new name
-            self.name = "%s:%d" % address
-        except (OSError, IOError):
-            # Raise keyboard-interrupt to stop
+        except (IOError, ValueError):
+            # In case of this error, stop gracefully
+            raise KeyboardInterrupt()
+
+        try:
+            # Handle the readable socket
+            self.handle()
+        except IOError:
+            # In case of this error, stop gracefully
             raise KeyboardInterrupt()
 
     def finalize(self):
         # Close socket connection
-        if self._socket:
-            self._socket.close()
+        self.socket.close()

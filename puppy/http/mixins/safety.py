@@ -1,56 +1,69 @@
 from puppy.http.protocol import HTTPReceiver
+from puppy.socket.utilities import read
 
 
 class HTTPSafeReceiverMixIn(HTTPReceiver):
     # Variables to determine maximum sizes
-    maximum_readuntil = 4 * 1024
-    maximum_recvall = 4 * 1024 * 1024
-    maximum_recvexact = 64 * 1024 * 1024
+    maximum_line_length = 64 * 1024
+    maximum_content_length = 16 * 1024 * 1024
 
-    def __init__(self, wrapped, timeout=60):
-        # Initialize parent
-        super(HTTPSafeReceiverMixIn, self).__init__(wrapped)
+    def receive_line(self, socket):
+        # Receive a line using the parent
+        line = super(HTTPSafeReceiverMixIn, self).receive_line(socket)
 
-        # Set a socket timeout
-        self._socket.settimeout(timeout)
+        # Make sure line is not too long
+        assert len(line) < self.maximum_line_length, "Line is too long"
 
-    def recvexact(self, length=0):
-        # Make sure the length is not larger then maxlength
-        assert length < self.maximum_recvexact, "Chunk is too long"
+        # Return the line
+        return line
 
-        # Receive using parent
-        return super(HTTPSafeReceiverMixIn, self).recvexact(length)
+    def receive_content_by_length(self, socket, length):
+        # Make sure length is under the maximal
+        assert length < self.maximum_content_length, "Content is too long"
 
-    def recvall(self):
-        # Initialize reading buffer
+        # Return the content by length
+        return super(HTTPSafeReceiverMixIn, self).receive_content_by_length(socket, length)
+
+    def receive_content_by_chunks(self, socket):
+        # Receive by chunks
         buffer = bytes()
-        temporary = True
+        length = int(self.receive_line(socket), 16)
 
-        # Loop until nothing left to read
-        while temporary:
-            # Make sure buffer is not too long
-            assert len(buffer) < self.maximum_recvall, "Buffer is too long"
+        # Loop until no more chunks
+        while length:
+            # Make sure length has not reached the maximum
+            assert len(buffer) + length < self.maximum_content_length, "Content is too long"
 
-            # Read new temporary chunk
-            temporary = self.recv(self._chunk)
+            # Receive the chunk
+            buffer += read(socket, length)
 
-            # Append chunk to buffer
-            buffer += temporary
+            # Read an empty line
+            self.receive_line(socket)
+
+            # Receive the next length
+            length = int(self.receive_line(socket), 16)
+
+        # Receive the last line
+        self.receive_line(socket)
 
         # Return the buffer
         return buffer
 
-    def readuntil(self, needle):
-        # Create a reading buffer
+    def receive_content_by_stream(self, socket, chunk=4096):
+        # Initialize reading buffer
         buffer = bytes()
+        temporary = socket.recv(chunk)
 
-        # Loop until needle in buffer
-        while needle not in buffer:
-            # Make sure buffer not too long
-            assert len(buffer) < self.maximum_readuntil, "Buffer is too long"
+        # Loop until buffer is full
+        while temporary:
+            # Append to the buffer
+            buffer += temporary
 
-            # Receive the next byte
-            buffer += self.recvexact(1)
+            # Make sure length has not passed the maximum
+            assert len(buffer) < self.maximum_content_length, "Content is too long"
 
-        # Strip the buffer of the separator
-        return buffer[:-len(needle)]
+            # Receive the next chunk into a temporary buffer
+            temporary = socket.recv(chunk)
+
+        # Return the buffer
+        return buffer

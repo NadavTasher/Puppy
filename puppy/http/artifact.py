@@ -1,4 +1,4 @@
-from puppy.http.types.headers import Headers
+from puppy.http.headers import Headers
 
 
 class Artifact(object):

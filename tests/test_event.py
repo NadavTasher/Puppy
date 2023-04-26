@@ -5,6 +5,8 @@ import unittest
 import tempfile
 import threading
 
+from utilities import raises
+
 from puppy.thread.future import future
 from puppy.thread.event import Event, select as eselect
 
@@ -86,10 +88,28 @@ class EventTestCase(unittest.TestCase):
         assert not select.select([e1, e2], [], [], 0)[0]
         assert select.select([e1, e2], [], [], 0.3)[0]
 
-    def test_event_maximum_fd(self):
+    def test_event_no_max_fd_without_select(self):
         # Place holder for events
         output = list()
 
         # Test the maximum fds
         for _ in range(1024):
             output.append(Event())
+
+    def test_event_no_fd_leak_with_select(self):
+        # Create the target event
+        event = Event()
+
+        # Check FDs
+        event.fileno()
+        rfd, wfd = event.rfile, event.wfile
+
+        # Select on the event
+        select.select([event], [], [], 0.5)
+
+        # Delete the event
+        del event
+
+        # Make sure fds are closed
+        with raises(IOError, OSError):
+            os.write(wfd, b"\x00")

@@ -1,5 +1,5 @@
 from puppy.http.constants import VERSION
-from puppy.http.types.artifact import Artifact
+from puppy.http.artifact import Artifact
 
 
 class Response(Artifact):

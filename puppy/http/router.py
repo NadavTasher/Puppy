@@ -2,7 +2,7 @@ import os
 
 from puppy.http.url import pathsplit
 from puppy.http.constants import GET, POST
-from puppy.http.types.response import Response
+from puppy.http.response import Response
 
 
 class HTTPRouter(object):

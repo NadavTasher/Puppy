@@ -1,8 +1,7 @@
-from puppy.socket.wrapper import SocketReader, SocketWriter
-from puppy.http.types.headers import Headers
-from puppy.http.types.request import Request
-from puppy.http.types.response import Response
-from puppy.http.types.artifact import Received
+from puppy.http.headers import Headers
+from puppy.http.request import Request
+from puppy.http.response import Response
+from puppy.http.artifact import Received
 from puppy.http.constants import (
     CRLF,
     INTEGER,
@@ -14,24 +13,41 @@ from puppy.http.constants import (
     TRANSFER_ENCODING,
 )
 
+from puppy.socket.utilities import write, read, readall, readuntil
 
-class HTTPReader(SocketReader):
 
-    def receive_artifact(self, content_expected=True):
+class HTTPReader(object):
+
+    def receive_line(self, socket):
+        return readuntil(socket, CRLF)
+
+    def receive_lines(self, socket):
+        # Initialize first line
+        line = self.receive_line(socket)
+
+        # Loop until no lines are left
+        while line:
+            # Yield the line
+            yield line
+
+            # Read the next line
+            line = self.receive_line(socket)
+
+    def receive_artifact(self, socket, content_expected=True):
         # Receive all artifact components
-        header = self.readline()
-        headers = self.receive_headers()
-        content = self.receive_content(headers, content_expected)
+        header = self.receive_line(socket)
+        headers = self.receive_headers(socket)
+        content = self.receive_content(socket, headers, content_expected)
 
         # Return created artifact
         return Received(header, headers, content)
 
-    def receive_headers(self):
+    def receive_headers(self, socket):
         # Create headers object
         headers = Headers()
 
         # Loop over all lines
-        for line in self.readlines():
+        for line in self.receive_lines(socket):
             # Validate header structure
             if SPEARATOR not in line:
                 continue
@@ -49,14 +65,14 @@ class HTTPReader(SocketReader):
         # Return the headers object
         return headers
 
-    def receive_content(self, headers, content_expected=True):
+    def receive_content(self, socket, headers, content_expected=True):
         # If a length is defined, fetch by length
         if CONTENT_LENGTH in headers:
             # Fetch content-length header
             (content_length,) = headers.pop(CONTENT_LENGTH)
 
             # Read content by known length
-            return self.receive_content_by_length(int(content_length))
+            return self.receive_content_by_length(socket, int(content_length))
 
         # If encoding is defined, fetch by chunks
         if TRANSFER_ENCODING in headers:
@@ -66,8 +82,8 @@ class HTTPReader(SocketReader):
             # Make sure the encoding is supported
             assert transfer_encoding.lower() == CHUNKED
 
-            # Receive by chunks
-            return self.receive_content_by_chunks()
+            # Receive content by chunks
+            return self.receive_content_by_chunks(socket)
 
         # Make sure content-type is defined
         if CONTENT_TYPE not in headers:
@@ -78,86 +94,90 @@ class HTTPReader(SocketReader):
             return
 
         # Receive content until socket is closed
-        return self.receive_content_by_stream()
+        return self.receive_content_by_stream(socket)
 
-    def receive_content_by_length(self, length):
-        return self.recvexact(length)
+    def receive_content_by_length(self, socket, length):
+        # Read content by known length
+        return read(socket, length)
 
-    def receive_content_by_chunks(self):
-        # Initialize buffer and length
-        length = None
+    def receive_content_by_chunks(self, socket):
+        # Receive by chunks
         buffer = bytes()
+        length = int(self.receive_line(socket), 16)
 
-        # Loop until length is 0
-        while length != 0:
-            # Receive the next chunk's length
-            length = int(self.readline(), 16)
+        # Loop until no more chunks
+        while length:
+            # Receive the chunk
+            buffer += read(socket, length)
 
-            # Yield the line's length
-            buffer += self.recvexact(length)
+            # Read an empty line
+            self.receive_line(socket)
 
-            # Read separator line
-            self.readline()
+            # Receive the next length
+            length = int(self.receive_line(socket), 16)
 
-        # Return created buffer
+        # Receive the last line
+        self.receive_line(socket)
+
+        # Return the buffer
         return buffer
 
-    def receive_content_by_stream(self):
-        # Receive all data
-        return self.recvall()
-
-    def readline(self, separator=CRLF):
-        return super(HTTPReader, self).readline(separator)
-
-    def readlines(self, separator=CRLF):
-        return super(HTTPReader, self).readlines(separator)
+    def receive_content_by_stream(self, socket):
+        return readall(socket)
 
 
-class HTTPWriter(SocketWriter):
+class HTTPWriter(object):
 
-    def transmit_artifact(self, artifact):
+    def transmit_line(self, socket, line=None):
+        # Transmit the line if defined
+        if line:
+            write(socket, line)
+
+        # Write the newline
+        write(socket, CRLF)
+
+    def transmit_lines(self, socket, lines):
+        # Transmit all lines
+        for line in lines:
+            self.transmit_line(socket, line)
+
+    def transmit_artifact(self, socket, artifact):
         # Transmit all parts
-        self.writeline(artifact.header)
-        self.transmit_headers(artifact.headers)
-        self.transmit_content(artifact.content)
+        self.transmit_line(socket, artifact.header)
+        self.transmit_headers(socket, artifact.headers)
+        self.transmit_content(socket, artifact.content)
 
-    def transmit_header(self, name, value):
+    def transmit_header(self, socket, name, value):
         # Write header in "key: value" format
-        self.writeline(name + SPEARATOR + WHITESPACE + value)
+        self.transmit_line(socket, name + SPEARATOR + WHITESPACE + value)
 
-    def transmit_headers(self, headers):
+    def transmit_headers(self, socket, headers):
         # Loop over headers and transmit them
         for name, values in headers.items():
             for value in values:
-                self.transmit_header(name, value)
+                self.transmit_header(socket, name, value)
 
-    def transmit_content(self, content):
+    def transmit_content(self, socket, content):
         # Check if content should be sent
         if content is None:
             # Send empty newline
-            self.writeline()
+            self.transmit_line(socket)
         else:
             # Write content-length header
-            self.transmit_header(CONTENT_LENGTH, INTEGER % len(content))
+            self.transmit_header(socket, CONTENT_LENGTH, INTEGER % len(content))
 
             # Send newline separator
-            self.writeline()
+            self.transmit_line(socket)
 
             # Send the content buffer
-            self.sendall(content)
-
-    def writeline(self, line=bytes(), separator=CRLF):
-        return super(HTTPWriter, self).writeline(line, separator)
-
-    def writelines(self, lines, separator=CRLF):
-        return super(HTTPWriter, self).writelines(lines, separator)
+            write(socket, content)
 
 
 class HTTPReceiver(HTTPReader):
 
-    def receive_request(self):
+    def receive_request(self, socket):
         # Receive artifact from parent
-        artifact = self.receive_artifact(content_expected=False)
+        artifact = self.receive_artifact(socket, content_expected=False)
 
         # Parse HTTP header as request header
         method, location, _ = artifact.header.split(WHITESPACE, 2)
@@ -165,9 +185,9 @@ class HTTPReceiver(HTTPReader):
         # Return created request
         return Request(method, location, artifact.headers, artifact.content)
 
-    def receive_response(self):
+    def receive_response(self, socket):
         # Receive artifact from parent
-        artifact = self.receive_artifact(content_expected=True)
+        artifact = self.receive_artifact(socket, content_expected=True)
 
         # Parse HTTP header as response header
         _, status, message = artifact.header.split(WHITESPACE, 2)
@@ -181,8 +201,8 @@ class HTTPReceiver(HTTPReader):
 
 class HTTPTransmitter(HTTPWriter):
 
-    def transmit_request(self, request):
-        return self.transmit_artifact(request)
+    def transmit_request(self, socket, request):
+        return self.transmit_artifact(socket, request)
 
-    def transmit_response(self, response):
-        return self.transmit_artifact(response)
+    def transmit_response(self, socket, response):
+        return self.transmit_artifact(socket, response)

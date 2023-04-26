@@ -1,20 +1,19 @@
 import io
 import gzip
 
-from puppy.socket.wrapper import SocketWrapper
 from puppy.http.protocol import HTTPReceiver, HTTPTransmitter
 from puppy.http.constants import ACCEPT_ENCODING, CONTENT_ENCODING, GZIP
 
 
-class HTTPCompressionMixIn(SocketWrapper):
+class HTTPCompressionMixIn(object):
     compression_support = False
 
 
 class HTTPCompressionReceiverMixIn(HTTPCompressionMixIn, HTTPReceiver):
 
-    def receive_artifact(self, *args, **kwargs):
+    def receive_artifact(self, socket, content_expected=True):
         # Read artifact from parent
-        artifact = super(HTTPCompressionReceiverMixIn, self).receive_artifact(*args, **kwargs)
+        artifact = super(HTTPCompressionReceiverMixIn, self).receive_artifact(socket, content_expected)
 
         # Update compression support from artifact
         self._update_compression_support(artifact.headers)
@@ -54,14 +53,14 @@ class HTTPCompressionReceiverMixIn(HTTPCompressionMixIn, HTTPReceiver):
 
 class HTTPCompressionTransmitterMixIn(HTTPCompressionMixIn, HTTPTransmitter):
 
-    def transmit_request(self, request):
+    def transmit_request(self, socket, request):
         # Add accept-encoding header
         request.headers[ACCEPT_ENCODING] = GZIP
 
         # Transmit modified request
-        return super(HTTPCompressionTransmitterMixIn, self).transmit_request(request)
+        return super(HTTPCompressionTransmitterMixIn, self).transmit_request(socket, request)
 
-    def transmit_response(self, response):
+    def transmit_response(self, socket, response):
         # Check if compression is supported
         if self.compression_support and response.content:
             # Set compression header
@@ -76,4 +75,4 @@ class HTTPCompressionTransmitterMixIn(HTTPCompressionMixIn, HTTPTransmitter):
             response.content = temporary.getvalue()
 
         # Transmit the response
-        return super(HTTPCompressionTransmitterMixIn, self).transmit_response(response)
+        return super(HTTPCompressionTransmitterMixIn, self).transmit_response(socket, response)

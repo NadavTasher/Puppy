@@ -1,17 +1,16 @@
-from puppy.socket.wrapper import SocketWrapper
 from puppy.http.protocol import HTTPReceiver, HTTPTransmitter
 from puppy.http.constants import CLOSE, CONNECTION
 
 
-class HTTPConnectionStateMixIn(SocketWrapper):
+class HTTPConnectionStateMixIn(object):
     should_close = False
 
 
 class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
 
-    def receive_artifact(self, *args, **kwargs):
+    def receive_artifact(self, socket, content_expected=True):
         # Receive artifact from headers
-        artifact = super(HTTPConnectionStateReceiverMixIn, self).receive_artifact(*args, **kwargs)
+        artifact = super(HTTPConnectionStateReceiverMixIn, self).receive_artifact(socket, content_expected)
 
         # Update connection state
         self._update_connection_state(artifact.headers)
@@ -19,14 +18,14 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
         # Return the artifact
         return artifact
 
-    def receive_response(self):
+    def receive_response(self, socket):
         # Try-finally
         try:
-            return super(HTTPConnectionStateReceiverMixIn, self).receive_response()
+            return super(HTTPConnectionStateReceiverMixIn, self).receive_response(socket)
         finally:
             # Close the socket if needed
             if self.should_close:
-                self.close()
+                socket.close()
 
     def _update_connection_state(self, headers):
         # Set default should close
@@ -45,19 +44,19 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
 
 class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmitter):
 
-    def transmit_artifact(self, artifact):
+    def transmit_artifact(self, socket, artifact):
         # Add connection state header
         if self.should_close:
             artifact.headers[CONNECTION] = CLOSE
 
         # Write the artifact
-        return super(HTTPConnectionStateTransmitterMixIn, self).transmit_artifact(artifact)
+        return super(HTTPConnectionStateTransmitterMixIn, self).transmit_artifact(socket, artifact)
 
-    def transmit_response(self, response):
+    def transmit_response(self, socket, response):
         # Try-finally
         try:
-            return super(HTTPConnectionStateTransmitterMixIn, self).transmit_response(response)
+            return super(HTTPConnectionStateTransmitterMixIn, self).transmit_response(socket, response)
         finally:
             # Close the socket if needed
             if self.should_close:
-                self.close()
+                socket.close()

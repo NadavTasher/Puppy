@@ -4,59 +4,41 @@ from puppy.simple.http import SafeHTTP
 from puppy.socket.server import SocketServer, SocketWorker
 
 
-class HTTPHandler(SocketWorker):
-    # Internal HTTP interface
-    _class = SafeHTTP
-    _interface = None
+class HTTPWorker(SocketWorker):
 
-    def loop(self):
+    interface = None
+
+    def initialize(self):
+        # Create the HTTP interface
+        self.interface = SafeHTTP()
+
+    def handle(self):
         try:
-            # Check if interface was closed
-            if self._interface.closed:
-                raise IOError()
-
-            # Check if interface is readable
-            if not self.select([self._socket], 1):
-                return
-
             # Read request from client
-            request = self._interface.receive_request()
+            request = self.interface.receive_request(self.socket)
 
             # Handle client request
-            response = self._parent.handler(request)
+            response = self.parent.handler(request)
 
             # Transmit response to client
-            self._interface.transmit_response(response)
+            self.interface.transmit_response(self.socket, response)
         except IOError:
             # Stop the worker
             raise KeyboardInterrupt()
 
 
-class HTTPWorker(HTTPHandler):
+class HTTPSWorker(HTTPWorker):
 
     def initialize(self):
-        # Initialize parent
-        HTTPHandler.initialize(self)
-
-        # Initialize the interface
-        self._interface = self._class(self._socket)
-
-
-class HTTPSWorker(HTTPHandler):
-
-    def initialize(self):
-        # Initialize parent
-        HTTPHandler.initialize(self)
+        # Initialize the handler
+        super(HTTPSWorker, self).initialize()
 
         try:
             # Wrap socket with SSL using parent's context
-            self._socket = self._parent.context.wrap_socket(self._socket, server_side=True)
+            self.socket = self.parent.context.wrap_socket(self.socket, server_side=True)
         except (ssl.SSLError, OSError):
             # Raise exception to stop the handler
             raise KeyboardInterrupt()
-
-        # Initialize the interface
-        self._interface = self._class(self._socket)
 
 
 class HTTPServer(SocketServer):

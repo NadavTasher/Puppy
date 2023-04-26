@@ -7,8 +7,8 @@ from puppy.simple.http import SafeHTTP
 from puppy.http.client import HTTPClient
 from puppy.http.server import HTTPServer
 from puppy.http.router import HTTPRouter
-from puppy.http.types.headers import Headers
-from puppy.http.types.response import Response
+from puppy.http.headers import Headers
+from puppy.http.response import Response
 
 
 @contextlib.contextmanager
