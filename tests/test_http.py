@@ -1,14 +1,20 @@
+import io
 import time
+import socket
 import random
 import unittest
 import contextlib
 
-from puppy.simple.http import SafeHTTP
+from utilities import raises
+
+from puppy.simple.http import SafeHTTP, HTTP
 from puppy.http.client import HTTPClient
 from puppy.http.server import HTTPServer
 from puppy.http.router import HTTPRouter
 from puppy.http.headers import Headers
+from puppy.http.request import Request
 from puppy.http.response import Response
+from puppy.http.mixins.host import HTTPHostTransmitterMixIn
 
 
 @contextlib.contextmanager
@@ -31,8 +37,25 @@ def create_server(handler):
         server.stop()
         server.join()
 
+@contextlib.contextmanager
+def create_socketpair():
+    lsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    lsocket.bind(("127.0.0.1", 0))
+    lsocket.listen(1)
 
-class HTTPClientTestCase(unittest.TestCase):
+    csocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    csocket.connect(lsocket.getsockname())
+    rsocket, _ = lsocket.accept()
+
+    lsocket.close()
+
+    try:
+        yield (csocket, rsocket)
+    finally:
+        csocket.close()
+        rsocket.close()
+
+class HTTPTestCase(unittest.TestCase):
 
     def test_server(self):
         # Create test handler
@@ -87,3 +110,22 @@ class HTTPClientTestCase(unittest.TestCase):
         assert eval(repr(headers))[b"Hello"] == [b"World"]
         headers[b"hello"] += b"Test"
         assert dict(eval(repr(headers))) == dict(Headers([(b"Hello", [b"World", b"Test"])]))
+
+class HTTPMixInTestCase(unittest.TestCase):
+
+    def test_host_header_transmitter(self):
+
+        request = Request(b"GET", b"/", [], bytes())
+        
+        receiver = HTTP()
+        transmitter = HTTPHostTransmitterMixIn()
+
+        with raises(AttributeError):
+            transmitter.transmit_request(io.BytesIO(), request)
+
+        with create_socketpair() as (r, w):
+            transmitter.transmit_request(w, request)
+            received = receiver.receive_request(r)
+
+            # Make sure host header exists
+            assert received.headers[b"Host"] == [("%s:%d" % w.getpeername()).encode()]
