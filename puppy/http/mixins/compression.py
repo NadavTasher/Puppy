@@ -11,9 +11,9 @@ class HTTPCompressionMixIn(object):
 
 class HTTPCompressionReceiverMixIn(HTTPCompressionMixIn, HTTPReceiver):
 
-    def receive_artifact(self, socket, content_expected=True):
+    def _receive_artifact(self, socket, content_expected=True):
         # Read artifact from parent
-        artifact = super(HTTPCompressionReceiverMixIn, self).receive_artifact(socket, content_expected)
+        artifact = super(HTTPCompressionReceiverMixIn, self)._receive_artifact(socket, content_expected)
 
         # Update compression support from artifact
         self._update_compression_support(artifact.headers)

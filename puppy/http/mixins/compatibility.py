@@ -1,41 +1,39 @@
 import io
 
 from puppy.http.protocol import HTTPReceiver, HTTPTransmitter
-from puppy.http.constants import CR, LF
-
-from puppy.socket.utilities import readuntil
-
+from puppy.http.constants import CR, LF, CRLF
 
 class HTTPCompatibleReceiverMixIn(HTTPReceiver):
 
-    def receive_line(self, socket):
+    def _receive_line(self, socket):
         # Read until LF in buffer
-        line = readuntil(socket, LF)
+        line = self._receive_until(socket, LF)
 
         # Make sure buffer is not empty
         if not line:
             return line
 
-        # Check if CR should be stripped
-        if line[-len(CR)] != CR:
-            return line
+        # Does line end with CRLF?
+        if line[-len(CRLF):] == CRLF:
+            return line[:-len(CRLF)]
 
-        # Return the modified buffer
-        return line[:-len(CR)]
+        # Line does not end with CRLF
+        return line[:-len(LF)]
 
 
 class HTTPBufferedTransmitterMixIn(HTTPTransmitter):
 
-    buffer = None
+    def _transmit(self, socket, buffer):
+        # Write to the buffer
+        socket.write(buffer)
 
-    def transmit_artifact(self, socket, artifact):
+    def _transmit_artifact(self, socket, artifact):
         # Create temporary writing buffer
         buffer = io.BytesIO()
 
         try:
-
-            # Transmit the artifact using the parent
-            return super(HTTPBufferedTransmitterMixIn, self).transmit_artifact(buffer, artifact)
+            # Transmit the artifact to the buffer
+            super(HTTPBufferedTransmitterMixIn, self)._transmit_artifact(buffer, artifact)
         finally:
-            # Write the buffer
-            write(socket, buffer.getvalue())
+            # Transmit the buffer
+            super(HTTPBufferedTransmitterMixIn, self)._transmit(socket, buffer.getvalue())

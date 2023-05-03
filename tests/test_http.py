@@ -15,6 +15,7 @@ from puppy.http.headers import Headers
 from puppy.http.request import Request
 from puppy.http.response import Response
 from puppy.http.mixins.host import HTTPHostTransmitterMixIn
+from puppy.http.mixins.compatibility import HTTPBufferedTransmitterMixIn
 
 
 @contextlib.contextmanager
@@ -129,3 +130,17 @@ class HTTPMixInTestCase(unittest.TestCase):
 
             # Make sure host header exists
             assert received.headers[b"Host"] == [("%s:%d" % w.getpeername()).encode()]
+
+    def test_buffered_transmitter(self):
+
+        request = Request(b"GET", b"/", [], bytes())
+        
+        receiver = HTTP()
+        transmitter = HTTPBufferedTransmitterMixIn()
+
+        with create_socketpair() as (r, w):
+            transmitter.transmit_request(w, request)
+            received = receiver.receive_request(r)
+
+            # Make sure host header exists
+            assert repr(received) == repr(request)

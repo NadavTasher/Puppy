@@ -8,9 +8,9 @@ class HTTPConnectionStateMixIn(object):
 
 class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
 
-    def receive_artifact(self, socket, content_expected=True):
+    def _receive_artifact(self, socket, content_expected=True):
         # Receive artifact from headers
-        artifact = super(HTTPConnectionStateReceiverMixIn, self).receive_artifact(socket, content_expected)
+        artifact = super(HTTPConnectionStateReceiverMixIn, self)._receive_artifact(socket, content_expected)
 
         # Update connection state
         self._update_connection_state(artifact.headers)
@@ -44,13 +44,13 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
 
 class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmitter):
 
-    def transmit_artifact(self, socket, artifact):
+    def _transmit_artifact(self, socket, artifact):
         # Add connection state header
         if self.should_close:
             artifact.headers[CONNECTION] = CLOSE
 
         # Write the artifact
-        return super(HTTPConnectionStateTransmitterMixIn, self).transmit_artifact(socket, artifact)
+        return super(HTTPConnectionStateTransmitterMixIn, self)._transmit_artifact(socket, artifact)
 
     def transmit_response(self, socket, response):
         # Try-finally

@@ -7,9 +7,9 @@ class HTTPSafeReceiverMixIn(HTTPReceiver):
     maximum_line_length = 64 * 1024
     maximum_content_length = 16 * 1024 * 1024
 
-    def receive_line(self, socket):
+    def _receive_line(self, socket):
         # Receive a line using the parent
-        line = super(HTTPSafeReceiverMixIn, self).receive_line(socket)
+        line = super(HTTPSafeReceiverMixIn, self)._receive_line(socket)
 
         # Make sure line is not too long
         assert len(line) < self.maximum_line_length, "Line is too long"
@@ -17,17 +17,17 @@ class HTTPSafeReceiverMixIn(HTTPReceiver):
         # Return the line
         return line
 
-    def receive_content_by_length(self, socket, length):
+    def _receive_content_by_length(self, socket, length):
         # Make sure length is under the maximal
         assert length < self.maximum_content_length, "Content is too long"
 
         # Return the content by length
-        return super(HTTPSafeReceiverMixIn, self).receive_content_by_length(socket, length)
+        return super(HTTPSafeReceiverMixIn, self)._receive_content_by_length(socket, length)
 
-    def receive_content_by_chunks(self, socket):
+    def _receive_content_by_chunks(self, socket):
         # Receive by chunks
         buffer = bytes()
-        length = int(self.receive_line(socket), 16)
+        length = int(self._receive_line(socket), 16)
 
         # Loop until no more chunks
         while length:
@@ -38,18 +38,18 @@ class HTTPSafeReceiverMixIn(HTTPReceiver):
             buffer += read(socket, length)
 
             # Read an empty line
-            self.receive_line(socket)
+            self._receive_line(socket)
 
             # Receive the next length
-            length = int(self.receive_line(socket), 16)
+            length = int(self._receive_line(socket), 16)
 
         # Receive the last line
-        self.receive_line(socket)
+        self._receive_line(socket)
 
         # Return the buffer
         return buffer
 
-    def receive_content_by_stream(self, socket, chunk=4096):
+    def _receive_content_by_stream(self, socket, chunk=4096):
         # Initialize reading buffer
         buffer = bytes()
         temporary = socket.recv(chunk)
