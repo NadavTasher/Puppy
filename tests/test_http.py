@@ -38,6 +38,7 @@ def create_server(handler):
         server.stop()
         server.join()
 
+
 @contextlib.contextmanager
 def create_socketpair():
     lsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -55,6 +56,7 @@ def create_socketpair():
     finally:
         csocket.close()
         rsocket.close()
+
 
 class HTTPTestCase(unittest.TestCase):
 
@@ -112,12 +114,13 @@ class HTTPTestCase(unittest.TestCase):
         headers[b"hello"] += b"Test"
         assert dict(eval(repr(headers))) == dict(Headers([(b"Hello", [b"World", b"Test"])]))
 
+
 class HTTPMixInTestCase(unittest.TestCase):
 
     def test_host_header_transmitter(self):
 
         request = Request(b"GET", b"/", [], bytes())
-        
+
         receiver = HTTP()
         transmitter = HTTPHostTransmitterMixIn()
 
@@ -134,7 +137,7 @@ class HTTPMixInTestCase(unittest.TestCase):
     def test_buffered_transmitter(self):
 
         request = Request(b"GET", b"/", [], bytes())
-        
+
         receiver = HTTP()
         transmitter = HTTPBufferedTransmitterMixIn()
 

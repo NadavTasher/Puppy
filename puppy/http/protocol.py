@@ -13,6 +13,7 @@ from puppy.http.constants import (
     TRANSFER_ENCODING,
 )
 
+
 class HTTPReceiver(object):
 
     def _receive(self, socket, length):
@@ -40,14 +41,14 @@ class HTTPReceiver(object):
     def _receive_exact(self, socket, length, chunk=4096):
         # Initialize reading buffer
         buffer = bytes()
-        
+
         # Make sure buffer is exactly the right size
         while len(buffer) < length:
             # Receive a chunk
             temporary = self._receive(socket, min(length - len(buffer), chunk))
 
             # Make sure data was read
-            if not temporary:    
+            if not temporary:
                 raise IOError("No more data to read")
 
             # Append the chunk to the buffer
@@ -256,5 +257,3 @@ class HTTPTransmitter(object):
 
     def transmit_response(self, socket, response):
         return self._transmit_artifact(socket, response)
-
-

@@ -3,6 +3,7 @@ import io
 from puppy.http.protocol import HTTPReceiver, HTTPTransmitter
 from puppy.http.constants import CR, LF, CRLF
 
+
 class HTTPCompatibleReceiverMixIn(HTTPReceiver):
 
     def _receive_line(self, socket):
