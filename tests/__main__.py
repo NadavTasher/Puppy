@@ -8,6 +8,7 @@ from test_thread import *
 from test_event import *
 from test_token import *
 from test_typing import *
+from test_namedtuple import *
 
 if __name__ == "__main__":
     unittest.main()
