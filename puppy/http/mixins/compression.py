@@ -2,6 +2,7 @@ import io
 import gzip
 
 from puppy.http.protocol import HTTPReceiver, HTTPTransmitter
+from puppy.http.utilities import pop_header, set_header, add_header, get_header, has_header
 from puppy.http.constants import ACCEPT_ENCODING, CONTENT_ENCODING, GZIP
 
 
@@ -19,18 +20,15 @@ class HTTPCompressionReceiverMixIn(HTTPCompressionMixIn, HTTPReceiver):
         self._update_compression_support(artifact.headers)
 
         # Check if a content encoding was supplied
-        if CONTENT_ENCODING not in artifact.headers:
+        if not has_header(artifact.headers, CONTENT_ENCODING):
             return artifact
 
-        # Check the content encoding
-        (content_encoding,) = artifact.headers.pop(CONTENT_ENCODING)
-
         # Make sure that the gzip encoding was provided
-        assert content_encoding.lower() == GZIP
+        assert pop_header(artifact.headers, CONTENT_ENCODING).lower() == GZIP
 
         # Decompress content as gzip
         with gzip.GzipFile(fileobj=io.BytesIO(artifact.content), mode="rb") as decompressor:
-            artifact.content = decompressor.read()
+            artifact = artifact._replace(content=decompressor.read())
 
         # Return the artifact
         return artifact
@@ -39,23 +37,22 @@ class HTTPCompressionReceiverMixIn(HTTPCompressionMixIn, HTTPReceiver):
         # Update compression support to false
         self.compression_support = False
 
-        # Fetch the accepted encodings
-        if ACCEPT_ENCODING not in headers:
+        # Make sure encodings header exists
+        if not has_header(headers, ACCEPT_ENCODING):
             return
 
         # Split the header value and loop
-        for accepted_encodings in headers[ACCEPT_ENCODING]:
-            for encoding in accepted_encodings.split(b","):
-                if encoding.strip().lower() == GZIP:
-                    # Compression is supported!
-                    self.compression_support = True
+        for encoding in get_header(headers, ACCEPT_ENCODING).split(b","):
+            if encoding.strip().lower() == GZIP:
+                # Compression is supported!
+                self.compression_support = True
 
 
 class HTTPCompressionTransmitterMixIn(HTTPCompressionMixIn, HTTPTransmitter):
 
     def transmit_request(self, socket, request):
         # Add accept-encoding header
-        request.headers[ACCEPT_ENCODING] = GZIP
+        add_header(request.headers, ACCEPT_ENCODING, GZIP)
 
         # Transmit modified request
         return super(HTTPCompressionTransmitterMixIn, self).transmit_request(socket, request)
@@ -64,7 +61,7 @@ class HTTPCompressionTransmitterMixIn(HTTPCompressionMixIn, HTTPTransmitter):
         # Check if compression is supported
         if self.compression_support and response.content:
             # Set compression header
-            response.headers[CONTENT_ENCODING] = GZIP
+            set_header(response.headers, CONTENT_ENCODING, GZIP)
 
             # Compress the content using gzip
             temporary = io.BytesIO()
@@ -72,7 +69,7 @@ class HTTPCompressionTransmitterMixIn(HTTPCompressionMixIn, HTTPTransmitter):
                 compressor.write(response.content)
 
             # Update content with value
-            response.content = temporary.getvalue()
+            response = response._replace(content=temporary.getvalue())
 
         # Transmit the response
         return super(HTTPCompressionTransmitterMixIn, self).transmit_response(socket, response)

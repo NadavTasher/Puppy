@@ -4,9 +4,8 @@ import contextlib
 
 from puppy.simple.http import HTTP
 
-from puppy.http.url import urlsplit
-from puppy.http.headers import Headers
-from puppy.http.request import Request
+from puppy.http.types import Request
+from puppy.http.utilities import has_header, pop_header, set_header, split_url
 from puppy.http.constants import GET, POST, COOKIE, SET_COOKIE, HOST, INTEGER
 
 try:
@@ -30,32 +29,34 @@ class HTTPClient(object):
 
         # State variables
         self.cookies = dict()
-        self.headers = list()
+        self.headers = dict()
         self.history = list()
 
     def _update_request(self, request):
+        # Check if cookies are defined
+        if not self.cookies:
+            return request
+
+        # Create cookies header
+        cookies = b"; ".join([
+            # Format as name=value
+            b"%s=%s" % (quote(name).encode(), quote(value).encode())
+            # For each cookie in the jar
+            for name, value in self.cookies.items()
+        ])
+
         # Set cookies header
-        if self.cookies:
-            request.headers.set(
-                COOKIE,
-                b"; ".join([
-                    # Format as name=value
-                    b"%s=%s" % (quote(name).encode(), quote(value).encode())
-                    # For each cookie in the jar
-                    for name, value in self.cookies.items()
-                ]),
-            )
+        set_header(request.headers, COOKIE, cookies)
 
         # Return the request
         return request
 
     def _update_response(self, response):
-        # Check if response contains cookies
-        if SET_COOKIE not in response.headers:
-            return response
+        # Loop over all response cookie headers
+        while has_header(response.headers, SET_COOKIE):
+            # Pop one set-cookie header
+            header = pop_header(response.headers, SET_COOKIE)
 
-        # Update cookie jar with response headers
-        for header in response.headers.pop(SET_COOKIE):
             # Check if semicolon exists
             if b";" in header:
                 # Split by semicolon
@@ -109,19 +110,15 @@ class HTTPClient(object):
     def post(self, url, *args, **kwargs):
         return self.request(POST, url, *args, **kwargs)
 
-    def request(self, method, url, headers=[], body=None):
-        # Create headers object
-        headers = Headers(headers)
+    def request(self, method, url, headers=None, body=None):
+        # Create header list
+        headers = headers or list()
 
         # Parse URL using parser
-        schema, host, port, path = urlsplit(url)
+        schema, host, port, path = split_url(url)
 
-        # Add host header if required
-        if HOST not in headers:
-            if not port:
-                headers[HOST] = host
-            else:
-                headers[HOST] = host + b":" + INTEGER % port
+        # Append host header
+        headers.append((HOST, host if not port else host + b":" + INTEGER % port))
 
         # Make sure port is defined
         schema = schema or SCHEMA_HTTP

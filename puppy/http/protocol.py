@@ -1,11 +1,10 @@
-from puppy.http.headers import Headers
-from puppy.http.request import Request
-from puppy.http.response import Response
-from puppy.http.artifact import Received
+from puppy.http.types import Artifact, Request, Response
+from puppy.http.utilities import pop_header, has_header
 from puppy.http.constants import (
     CRLF,
     INTEGER,
-    SPEARATOR,
+    VERSION,
+    SEPARATOR,
     WHITESPACE,
     CHUNKED,
     CONTENT_TYPE,
@@ -91,53 +90,50 @@ class HTTPReceiver(object):
         content = self._receive_content(socket, headers, content_expected)
 
         # Return created artifact
-        return Received(header, headers, content)
+        return Artifact(header, headers, content)
 
     def _receive_headers(self, socket):
-        # Create headers object
-        headers = Headers()
+        # Create header list
+        headers = list()
 
         # Loop over all lines
         for line in self._receive_lines(socket):
             # Validate header structure
-            if SPEARATOR not in line:
+            if SEPARATOR not in line:
                 continue
 
             # Split header line and create object
-            name, value = line.split(SPEARATOR, 1)
+            name, value = line.split(SEPARATOR, 1)
             name, value = name.strip(), value.strip()
 
-            # Append new header
-            if name not in headers:
-                headers[name] = value
-            else:
-                headers[name] += value
+            # Add header to list
+            headers.append((name, value))
 
         # Return the headers object
         return headers
 
     def _receive_content(self, socket, headers, content_expected=True):
         # If a length is defined, fetch by length
-        if CONTENT_LENGTH in headers:
-            # Fetch content-length header
-            (content_length,) = headers.pop(CONTENT_LENGTH)
+        if has_header(headers, CONTENT_LENGTH):
+            # Find the content length header
+            length = pop_header(headers, CONTENT_LENGTH)
+
+            # Make sure no content length header exists
+            assert not has_header(headers, CONTENT_LENGTH)
 
             # Read content by known length
-            return self._receive_content_by_length(socket, int(content_length))
+            return self._receive_content_by_length(socket, int(length))
 
         # If encoding is defined, fetch by chunks
-        if TRANSFER_ENCODING in headers:
-            # Fetch transfer-encoding header
-            (transfer_encoding,) = headers.pop(TRANSFER_ENCODING)
-
+        if has_header(headers, TRANSFER_ENCODING):
             # Make sure the encoding is supported
-            assert transfer_encoding.lower() == CHUNKED
+            assert pop_header(headers, TRANSFER_ENCODING).lower() == CHUNKED
 
             # Receive content by chunks
             return self._receive_content_by_chunks(socket)
 
         # Make sure content-type is defined
-        if CONTENT_TYPE not in headers:
+        if not has_header(headers, CONTENT_TYPE):
             return
 
         # Make sure content is expected
@@ -229,13 +225,12 @@ class HTTPTransmitter(object):
 
     def _transmit_header(self, socket, name, value):
         # Write header in "key: value" format
-        self._transmit_line(socket, name + SPEARATOR + WHITESPACE + value)
+        self._transmit_line(socket, name + SEPARATOR + WHITESPACE + value)
 
     def _transmit_headers(self, socket, headers):
         # Loop over headers and transmit them
-        for name, values in headers.items():
-            for value in values:
-                self._transmit_header(socket, name, value)
+        for name, value in headers:
+            self._transmit_header(socket, name, value)
 
     def _transmit_content(self, socket, content):
         # Check if content should be sent
@@ -253,7 +248,15 @@ class HTTPTransmitter(object):
             self._transmit(socket, content)
 
     def transmit_request(self, socket, request):
-        return self._transmit_artifact(socket, request)
+        # Create artifact from request
+        artifact = Artifact(b"%s %s HTTP/%s" % (request.method, request.location, VERSION), request.headers, request.content)
+
+        # Transmit the artifact
+        return self._transmit_artifact(socket, artifact)
 
     def transmit_response(self, socket, response):
-        return self._transmit_artifact(socket, response)
+        # Create artifact from response
+        artifact = Artifact(b"HTTP/%s %d %s" % (VERSION, response.status, response.message), response.headers, response.content)
+
+        # Transmit the artifact
+        return self._transmit_artifact(socket, artifact)

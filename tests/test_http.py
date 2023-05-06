@@ -11,9 +11,8 @@ from puppy.simple.http import SafeHTTP, HTTP
 from puppy.http.client import HTTPClient
 from puppy.http.server import HTTPServer
 from puppy.http.router import HTTPRouter
-from puppy.http.headers import Headers
-from puppy.http.request import Request
-from puppy.http.response import Response
+from puppy.http.types import Request, Response
+from puppy.http.utilities import pop_header
 from puppy.http.mixins.host import HTTPHostTransmitterMixIn
 from puppy.http.mixins.compatibility import HTTPBufferedTransmitterMixIn
 
@@ -62,7 +61,7 @@ class HTTPTestCase(unittest.TestCase):
 
     def test_server(self):
         # Create test handler
-        handler = lambda request: Response(123, bytes(), None, bytes())
+        handler = lambda request: Response(123, bytes(), [], bytes())
 
         # Create server for test
         with create_server(handler) as (server, http_port, https_port):
@@ -107,13 +106,6 @@ class HTTPTestCase(unittest.TestCase):
         response = client.get(b"https://github.com/")
         assert response.status == 200, response
 
-    def test_headers(self):
-        headers = Headers()
-        headers[b"Hello"] = b"World"
-        assert eval(repr(headers))[b"Hello"] == [b"World"]
-        headers[b"hello"] += b"Test"
-        assert dict(eval(repr(headers))) == dict(Headers([(b"Hello", [b"World", b"Test"])]))
-
 
 class HTTPMixInTestCase(unittest.TestCase):
 
@@ -132,7 +124,7 @@ class HTTPMixInTestCase(unittest.TestCase):
             received = receiver.receive_request(r)
 
             # Make sure host header exists
-            assert received.headers[b"Host"] == [("%s:%d" % w.getpeername()).encode()]
+            assert pop_header(received.headers, b"Host") == ("%s:%d" % w.getpeername()).encode()
 
     def test_buffered_transmitter(self):
 

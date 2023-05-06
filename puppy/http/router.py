@@ -1,8 +1,8 @@
 import os
 
-from puppy.http.url import pathsplit
+from puppy.http.types import Response
+from puppy.http.utilities import split_path
 from puppy.http.constants import GET, POST
-from puppy.http.response import Response
 
 
 class HTTPRouter(object):
@@ -70,13 +70,13 @@ class HTTPRouter(object):
                 result = self.routes[route](request)
 
                 # Wrap the result in a response
-                return Response(200, b"OK", None, result)
+                return Response(200, b"OK", [], result)
             except:
                 # The route has raised an exception
-                return Response(500, b"Internal Server Error", None, bytes())
+                return Response(500, b"Internal Server Error", [], bytes())
         else:
             # The route was not found
-            return Response(404, b"Not Found", None, bytes())
+            return Response(404, b"Not Found", [], bytes())
 
     def __call__(self, request):
         # Convert method and location
@@ -84,7 +84,7 @@ class HTTPRouter(object):
         location = request.location
 
         # Parse the location
-        path, query, fragment = pathsplit(location)
+        path, query, fragment = split_path(location)
 
         # Handle the request
         return self.handle(method, path, request)

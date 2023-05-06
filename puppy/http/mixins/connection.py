@@ -1,4 +1,5 @@
 from puppy.http.protocol import HTTPReceiver, HTTPTransmitter
+from puppy.http.utilities import set_header, has_header, get_header
 from puppy.http.constants import CLOSE, CONNECTION
 
 
@@ -32,14 +33,11 @@ class HTTPConnectionStateReceiverMixIn(HTTPConnectionStateMixIn, HTTPReceiver):
         self.should_close = True
 
         # If connection header not present, return
-        if CONNECTION not in headers:
+        if not has_header(headers, CONNECTION):
             return
 
-        # Fetch connection header
-        (connection,) = headers[CONNECTION]
-
         # Compare header to keepalive
-        self.should_close = connection.lower() == CLOSE
+        self.should_close = get_header(headers, CONNECTION).lower() == CLOSE
 
 
 class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmitter):
@@ -47,7 +45,7 @@ class HTTPConnectionStateTransmitterMixIn(HTTPConnectionStateMixIn, HTTPTransmit
     def _transmit_artifact(self, socket, artifact):
         # Add connection state header
         if self.should_close:
-            artifact.headers[CONNECTION] = CLOSE
+            set_header(artifact.headers, CONNECTION, CLOSE)
 
         # Write the artifact
         return super(HTTPConnectionStateTransmitterMixIn, self)._transmit_artifact(socket, artifact)
