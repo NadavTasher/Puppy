@@ -69,6 +69,10 @@ class HTTPRouter(object):
                 # Store the execution result
                 result = self.routes[route](request)
 
+                # Check if the result is a response
+                if isinstance(result, Response):
+                    return result
+
                 # Wrap the result in a response
                 return Response(200, b"OK", [], result)
             except:
