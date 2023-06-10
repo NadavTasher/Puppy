@@ -9,8 +9,19 @@ from puppy.simple.database import Database
 
 class DatabaseTestCase(unittest.TestCase):
 
-    def test_storage(self):
+    def test_durabillity(self):
+        # Create a new database
+        db = Database(tempfile.mktemp())
 
+        # Load some items into the database
+        with raises(TypeError):
+            db.a = dict(c="Hello", d=object())
+
+        # Validate the database items
+        assert db.a.c == "Hello"
+        assert "d" not in db.a
+
+    def test_storage(self):
         # Create a new database
         db = Database(tempfile.mktemp())
 

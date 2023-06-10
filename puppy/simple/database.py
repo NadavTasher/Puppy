@@ -4,7 +4,7 @@ import hashlib
 import functools
 
 from puppy.simple.bunch import MutableBunchMapping, Mapping, Bunch
-from puppy.simple.filesystem import remove
+from puppy.simple.filesystem import safe, remove
 
 
 class Keystore(MutableBunchMapping):
@@ -83,7 +83,7 @@ class Keystore(MutableBunchMapping):
             return
 
         # Write translation to file
-        with open(path, "wb") as file:
+        with safe(path, "wb") as file:
             file.write(raw)
 
     def __contains__(self, key):
@@ -113,14 +113,11 @@ class Keystore(MutableBunchMapping):
 
         # Check if value is a dictionary
         if not isinstance(value, Mapping):
-            # Make sure value is JSON seriallizable
-            json.dumps(value)
-
             # Delete the old value
             remove(path)
 
             # Write the object data as string
-            with open(path, "w") as file:
+            with safe(path, "w") as file:
                 json.dump(value, file)
         else:
             # Delete the old value
@@ -140,12 +137,16 @@ class Keystore(MutableBunchMapping):
     def __iter__(self):
         # List all of the items in the path
         for checksum in os.listdir(self._path):
+            # Make sure checksum is not a temporary path
+            if "~" in checksum:
+                continue
+
             # Open the translation for reading
             yield self._read_translation(checksum)
 
     def __len__(self):
         # Calculate the length of keys
-        return len(os.listdir(self._path))
+        return len([checksum for checksum in os.listdir(self._path) if "~" not in checksum])
 
     def __eq__(self, other):
         # Make sure the other object is a mapping
