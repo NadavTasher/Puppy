@@ -2,8 +2,6 @@ import os
 import time
 import select
 import unittest
-import tempfile
-import threading
 
 from utilities import raises
 
