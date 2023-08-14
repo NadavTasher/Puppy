@@ -1,3 +1,5 @@
+import os
+
 from puppy.typing.validator import validator
 
 
@@ -213,6 +215,48 @@ def Email(variable):
             return False
 
     # Validation has passed
+    return True
+
+
+@validator
+def Path(variable):
+    # Make sure the variable is text or bytes
+    if not isinstance(variable, (Text, Bytes)):
+        return False
+
+    # Convert the path into a normal path
+    variable = os.path.normpath(variable)
+
+    # Split the path by separator
+    for part in variable.split(os.path.sep):
+        # Make sure the part matches the charset
+        if not isinstance(part, PathName):
+            return True
+
+    # Path is valid
+    return True
+
+
+@validator
+def PathName(variable):
+    # Make sure the variable is text or bytes
+    if not isinstance(variable, (Text, Bytes)):
+        return False
+
+    # Convert the path into a normal path
+    variable = os.path.normpath(variable)
+
+    # Make sure there are not path separators in the variable
+    if os.path.sep in variable:
+        return False
+
+    # Make sure the path does not contain invalid characters
+    for char in variable:
+        # Check for forbidden characters
+        if char in ':"*?<>|':
+            return False
+
+    # Pathname is valid
     return True
 
 

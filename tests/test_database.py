@@ -1,25 +1,66 @@
+import os
 import json
 import unittest
 import tempfile
 
 from utilities import raises
 
-from puppy.simple.database import Database
+from puppy.simple.database import Database, FileSystemMutableMapping, Python, JSON
 
 
 class DatabaseTestCase(unittest.TestCase):
 
-    def test_durabillity(self):
-        # Create a new database
-        db = Database(tempfile.mktemp())
+    def test_filesystem_mutable_mapping(self):
+        # Create a new mutable mapping
+        db = FileSystemMutableMapping(tempfile.mktemp())
 
-        # Load some items into the database
+        # Try loading an item into the db
+        db._test_item = b"Hello!"
+
+        # Try loading a bad item
         with raises(TypeError):
-            db.a = dict(c="Hello", d=object())
+            db._test_item_2 = 10
 
-        # Validate the database items
-        assert db.a.c == "Hello"
-        assert "d" not in db.a
+        # Try loading in invalid path
+        with raises(TypeError):
+            db["Hello|World"] = b"Test!"
+
+        # Make sure database structure is ok
+        assert db._test_item == b"Hello!"
+        assert "_test_item_2" not in db
+        assert "Hello|World" not in db
+
+    def test_durabillity_python(self):
+        # Create a new database
+        db = Database(tempfile.mktemp(), Python)
+
+        # Insert some subdict into the db
+        db.subdict = dict(Hello="World")
+
+        # Make sure there are objects in the db
+        assert set(os.listdir(db._keys._objects_path)) == {'c66065be8268c074f0eb9c83423297bb5533e9f194f2995a736606a1698a9ffc', '7c9078aaabaee288341067544d27c1838aa5fe3b1bc4964d4c056b9bb388574e', '46e93f1a1f742b32d8ef751cdf4e2c5a8465bc88476cbfb19f3a77635947f0a9'}
+
+        # Delete the subdict and check again
+        del db.subdict
+
+        # Make sure there are no objects in the db
+        assert not len(os.listdir(db._keys._objects_path))
+
+    def test_durabillity_json(self):
+        # Create a new database
+        db = Database(tempfile.mktemp(), JSON)
+
+        # Insert some subdict into the db
+        db.subdict = dict(Hello="World")
+
+        # Make sure there are objects in the db
+        assert set(os.listdir(db._keys._objects_path)) == {'c25bf945aaff8fe16826d3c1ef117044d6cc1af8e0e9f0b4162308460a8207a7', 'c102685369c5e29182d7457bd5af52486928280f000dfe641db598b82c5753e0', '835e3cc48646d9fd4114d9cfb003dc85e1670a985563c4897ba6371908644326'}
+
+        # Delete the subdict and check again
+        del db.subdict
+
+        # Make sure there are no objects in the db
+        assert not len(os.listdir(db._keys._objects_path))
 
     def test_storage(self):
         # Create a new database
